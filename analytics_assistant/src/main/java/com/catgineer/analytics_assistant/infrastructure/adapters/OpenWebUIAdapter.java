@@ -6,15 +6,22 @@ import com.catgineer.analytics_assistant.infrastructure.ports.AIProvider;
 import io.vavr.control.Try;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.Duration;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.stream.Collectors; // Added for List.of which is used in mock, but also for real parsing
+import java.util.stream.Collectors;
 
 @Component
 @Profile("!mock") // This bean will be active unless the "mock" profile is active
@@ -23,10 +30,19 @@ public class OpenWebUIAdapter implements AIProvider {
     private static final Logger logger = LoggerFactory.getLogger(OpenWebUIAdapter.class);
     private final WebClient webClient;
 
-    private final String openWebUIApiBaseUrl;
+    @Value("${openwebui.api.baseurl}")
+    private String openWebUIApiBaseUrl;
+
+    @Value("${scp.remote.user}")
+    private String scpRemoteUser;
+
+    @Value("${scp.remote.host}")
+    private String scpRemoteHost;
+
+    @Value("${scp.remote.path}")
+    private String scpRemotePath;
 
     public OpenWebUIAdapter(WebClient.Builder webClientBuilder) {
-        this.openWebUIApiBaseUrl = "http://localhost:8080/openwebui/api"; // Placeholder
         this.webClient = webClientBuilder.baseUrl(openWebUIApiBaseUrl).build();
     }
 
@@ -104,5 +120,55 @@ public class OpenWebUIAdapter implements AIProvider {
     @Override
     public Flux<Try<ChartData>> extractChartData(String aiResponse) {
         return SafeRunner.futureStreamList(() -> blockingExtractChartData(aiResponse));
+    }
+
+    // --- Embed Data (SCP) ---
+
+    private Boolean blockingEmbedData(String data) throws Exception {
+        Path tempFile = null;
+        try {
+            // Create a temporary file
+            String filename = "embedding_data_" + UUID.randomUUID() + ".txt";
+            tempFile = Files.createTempFile(filename, ".tmp");
+            Files.write(tempFile, data.getBytes());
+            logger.info("Created temporary file for embedding: {}", tempFile);
+
+            // Construct SCP command
+            String scpCommand = String.format("scp %s %s@%s:%s",
+                    tempFile.toAbsolutePath(),
+                    scpRemoteUser,
+                    scpRemoteHost,
+                    scpRemotePath);
+
+            logger.info("Executing SCP command: {}", scpCommand);
+
+            // Execute SCP command
+            Process process = Runtime.getRuntime().exec(scpCommand);
+            int exitCode = process.waitFor();
+
+            if (exitCode == 0) {
+                logger.info("SCP transfer successful for file: {}", tempFile);
+                return true;
+            } else {
+                String errorOutput = new String(process.getErrorStream().readAllBytes());
+                logger.error("SCP transfer failed for file: {}. Exit code: {}. Error: {}", tempFile, exitCode, errorOutput);
+                throw new IOException("SCP transfer failed with exit code: " + exitCode + ". Error: " + errorOutput);
+            }
+        } finally {
+            // Clean up temporary file
+            if (tempFile != null && Files.exists(tempFile)) {
+                try {
+                    Files.delete(tempFile);
+                    logger.info("Deleted temporary file: {}", tempFile);
+                } catch (IOException e) {
+                    logger.warn("Failed to delete temporary file {}: {}", tempFile, e.getMessage());
+                }
+            }
+        }
+    }
+
+    @Override
+    public Mono<Try<Boolean>> embedData(String data) {
+        return SafeRunner.futureSafe(() -> blockingEmbedData(data));
     }
 }

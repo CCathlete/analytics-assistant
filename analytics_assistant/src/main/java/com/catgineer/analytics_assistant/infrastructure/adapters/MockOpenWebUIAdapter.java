@@ -102,4 +102,10 @@ public class MockOpenWebUIAdapter implements AIProvider {
     public Flux<Try<ChartData>> extractChartData(String aiResponse) {
         return SafeRunner.futureStreamList(() -> blockingExtractChartData(aiResponse));
     }
+
+    @Override
+    public Mono<Try<Boolean>> embedData(String data) {
+        logger.info("Mock: Embedding data (length: {})", data.length());
+        return Mono.just(Try.success(true));
+    }
 }

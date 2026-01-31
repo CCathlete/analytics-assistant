@@ -21,7 +21,7 @@ public class DotenvInitializer implements ApplicationContextInitializer<Configur
         try {
             // Load .env file from the project root
             Dotenv dotenv = Dotenv.configure()
-                                  .directory(System.getProperty("user.dir")) // Look in current working directory
+                                  .directory(System.getProperty("user.dir") + "/..") // Look in parent of current working directory.
                                   .ignoreIfMalformed()
                                   .ignoreIfMissing()
                                   .load();

@@ -12,4 +12,5 @@ public interface AIProvider {
     Mono<Try<String>> sendPromptToAI(String prompt, List<String> contextData);
     Mono<Try<Boolean>> validateAIResponse(String aiResponse);
     Flux<Try<ChartData>> extractChartData(String aiResponse);
+    Mono<Try<Boolean>> embedData(String data);
 }
