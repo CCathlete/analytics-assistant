@@ -61,7 +61,22 @@ public class AnalyticsUseCase {
                         return Flux.empty();
                     }
                     logger.info("Passing {} successful raw data entries to AIService for chart data generation with prompt: {}", successfulRawData.size(), prompt);
-                    return aiService.processPromptForCharts(prompt, successfulRawData); // Changed method call
+                    return aiService.processPromptForCharts(prompt, successfulRawData);
                 });
+    }
+
+    public Mono<Try<Boolean>> authenticate(String username, String password) {
+        logger.info("AnalyticsUseCase: Attempting authentication for user: {}", username);
+        return aiService.authenticate(username, password);
+    }
+
+    public Mono<Try<java.util.Map<String, String>>> getAllKnowledgeBases() {
+        logger.info("AnalyticsUseCase: Fetching all knowledge bases.");
+        return aiService.getAllKnowledgeBases();
+    }
+
+    public Mono<Try<List<String>>> getKnowledgeBaseFiles(String kbId) {
+        logger.info("AnalyticsUseCase: Fetching files for knowledge base ID: {}", kbId);
+        return aiService.getKnowledgeBaseFiles(kbId);
     }
 }

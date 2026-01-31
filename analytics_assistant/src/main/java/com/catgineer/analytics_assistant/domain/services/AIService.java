@@ -64,4 +64,27 @@ public class AIService {
                 .doOnComplete(() -> logger.info("Finished AI processing for prompt: '{}'.", prompt))
                 .doOnError(e -> logger.error("Error during AI processing pipeline for prompt '{}': {}", prompt, e.getMessage(), e));
     }
+
+    public Mono<Try<Boolean>> authenticate(String username, String password) {
+        logger.info("Attempting to authenticate user: {}", username);
+        return aiProvider.authenticate(username, password)
+                .doOnSuccess(tryResult -> {
+                    if (tryResult.isSuccess() && tryResult.get()) {
+                        logger.info("User {} authenticated successfully.", username);
+                    } else {
+                        logger.warn("Authentication failed for user {}: {}", username, tryResult.isFailure() ? tryResult.getCause().getMessage() : "Invalid credentials.");
+                    }
+                })
+                .doOnError(e -> logger.error("Error during authentication for user {}: {}", username, e.getMessage(), e));
+    }
+
+    public Mono<Try<java.util.Map<String, String>>> getAllKnowledgeBases() {
+        logger.info("Fetching all knowledge bases.");
+        return aiProvider.getAllKnowledgeBases();
+    }
+
+    public Mono<Try<List<String>>> getKnowledgeBaseFiles(String kbId) {
+        logger.info("Fetching files for knowledge base ID: {}", kbId);
+        return aiProvider.getKnowledgeBaseFiles(kbId);
+    }
 }

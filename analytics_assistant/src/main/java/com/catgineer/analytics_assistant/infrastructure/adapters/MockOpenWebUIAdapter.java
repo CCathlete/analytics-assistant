@@ -108,4 +108,19 @@ public class MockOpenWebUIAdapter implements AIProvider {
         logger.info("Mock: Embedding data (length: {})", data.length());
         return Mono.just(Try.success(true));
     }
+
+    @Override
+    public Mono<Try<Boolean>> authenticate(String username, String password) {
+        logger.info("Mock: Attempting authentication for user: {}", username);
+        return SafeRunner.futureSafe(() -> {
+            Thread.sleep(80); // Simulate network latency
+            boolean isAuthenticated = "user".equals(username) && "password".equals(password);
+            if (isAuthenticated) {
+                logger.info("Mock: Authentication successful for user: {}", username);
+            } else {
+                logger.warn("Mock: Authentication failed for user: {}", username);
+            }
+            return isAuthenticated;
+        });
+    }
 }

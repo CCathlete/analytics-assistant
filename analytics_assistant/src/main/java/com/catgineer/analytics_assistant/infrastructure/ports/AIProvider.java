@@ -13,4 +13,7 @@ public interface AIProvider {
     Mono<Try<Boolean>> validateAIResponse(String aiResponse);
     Flux<Try<ChartData>> extractChartData(String aiResponse);
     Mono<Try<Boolean>> embedData(String data);
+    Mono<Try<Boolean>> authenticate(String username, String password);
+    Mono<Try<java.util.Map<String, String>>> getAllKnowledgeBases();
+    Mono<Try<List<String>>> getKnowledgeBaseFiles(String kbId);
 }
