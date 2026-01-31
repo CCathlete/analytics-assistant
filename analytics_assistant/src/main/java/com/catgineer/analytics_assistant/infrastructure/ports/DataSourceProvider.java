@@ -1,7 +1,7 @@
 package com.catgineer.analytics_assistant.infrastructure.ports;
 
-import io.vavr.control.Try;
+import reactor.core.publisher.Mono;
 
 public interface DataSourceProvider {
-    Try<String> fetchFrom(String url);
+    Mono<String> fetchFrom(String url);
 }

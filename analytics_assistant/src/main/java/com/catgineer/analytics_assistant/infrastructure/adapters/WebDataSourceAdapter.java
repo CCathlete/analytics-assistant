@@ -1,34 +1,30 @@
 package com.catgineer.analytics_assistant.infrastructure.adapters;
 
-import com.catgineer.analytics_assistant.domain.SafeRunner;
 import com.catgineer.analytics_assistant.infrastructure.ports.DataSourceProvider;
-import io.vavr.control.Try;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Component;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
+@Component // Mark as a Spring component for DI
 public class WebDataSourceAdapter implements DataSourceProvider {
 
-    private final HttpClient client;
+    private final WebClient webClient;
 
-    public WebDataSourceAdapter() {
-        this.client = HttpClient.newHttpClient();
+    // WebClient should be injected, ideally as a Bean configured in BeanConfiguration
+    public WebDataSourceAdapter(WebClient webClient) {
+        this.webClient = webClient;
     }
 
     @Override
-    public Try<String> fetchFrom(String url) {
-        return SafeRunner.safe(() -> {
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(new URI(url))
-                    .GET()
-                    .build();
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() >= 200 && response.statusCode() < 300) {
-                return response.body();
-            } else {
-                throw new RuntimeException("HTTP request failed with status code: " + response.statusCode());
-            }
-        });
+    public Mono<String> fetchFrom(String url) {
+        return webClient.get()
+                .uri(url)
+                .retrieve()
+                .onStatus(HttpStatus::isError, clientResponse ->
+                        clientResponse.bodyToMono(String.class)
+                                .flatMap(errorBody -> Mono.error(new RuntimeException("HTTP request failed with status code: " + clientResponse.statusCode() + " Body: " + errorBody))))
+                .bodyToMono(String.class)
+                .onErrorResume(e -> Mono.error(new RuntimeException("Failed to fetch data from " + url + ": " + e.getMessage(), e)));
     }
 }
