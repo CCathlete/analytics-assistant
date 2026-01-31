@@ -1,7 +1,7 @@
 package com.catgineer.analytics_assistant.infrastructure.ports;
 
-import io.vavr.control.Either;
+import io.vavr.control.Try;
 
 public interface DataSourceProvider {
-    Either<Throwable, String> fetchFrom(String url);
+    Try<String> fetchFrom(String url);
 }

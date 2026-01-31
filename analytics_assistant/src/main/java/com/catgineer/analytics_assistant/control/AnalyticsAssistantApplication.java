@@ -1,4 +1,4 @@
-package com.catgineer.analytics_assistant;
+package com.catgineer.analytics_assistant.control;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

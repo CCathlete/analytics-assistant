@@ -1,7 +1,6 @@
 package com.catgineer.analytics_assistant.control.configuration;
 
 import com.catgineer.analytics_assistant.application.services.AnalyticsUseCase;
-import com.catgineer.analytics_assistant.domain.services.DataFetchingService;
 import com.catgineer.analytics_assistant.infrastructure.adapters.WebDataSourceAdapter;
 import com.catgineer.analytics_assistant.infrastructure.ports.DataSourceProvider;
 import org.springframework.context.annotation.Bean;
@@ -16,12 +15,7 @@ public class BeanConfiguration {
     }
 
     @Bean
-    public DataFetchingService dataFetchingService(DataSourceProvider dataSourceProvider) {
-        return new DataFetchingService(dataSourceProvider);
-    }
-
-    @Bean
-    public AnalyticsUseCase analyticsUseCase(DataFetchingService dataFetchingService) {
-        return new AnalyticsUseCase(dataFetchingService);
+    public AnalyticsUseCase analyticsUseCase(DataSourceProvider dataSourceProvider) {
+        return new AnalyticsUseCase(dataSourceProvider);
     }
 }

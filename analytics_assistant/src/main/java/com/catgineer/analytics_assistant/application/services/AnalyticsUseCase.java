@@ -1,19 +1,30 @@
 package com.catgineer.analytics_assistant.application.services;
 
-import com.catgineer.analytics_assistant.domain.services.DataFetchingService;
-import io.vavr.control.Either;
+import com.catgineer.analytics_assistant.infrastructure.ports.DataSourceProvider;
+import io.vavr.control.Try;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class AnalyticsUseCase {
 
-    private final DataFetchingService dataFetchingService;
+    private static final Logger logger = LoggerFactory.getLogger(AnalyticsUseCase.class);
 
-    public AnalyticsUseCase(DataFetchingService dataFetchingService) {
-        this.dataFetchingService = dataFetchingService;
+    private final DataSourceProvider dataSourceProvider;
+
+    public AnalyticsUseCase(DataSourceProvider dataSourceProvider) {
+        this.dataSourceProvider = dataSourceProvider;
     }
 
-    public Either<Throwable, String> getAnalyticsData(String sourceUrl) {
-        // Here you could add more application-specific logic,
-        // like validation, authorization, combining data from multiple sources, etc.
-        return dataFetchingService.fetchDataFrom(sourceUrl);
+    public Try<String> getAnalyticsData(String sourceUrl) {
+        logger.info("Attempting to fetch analytics data for URL: {}", sourceUrl);
+
+        if (sourceUrl == null || sourceUrl.isBlank()) {
+            logger.warn("Received null or blank URL for analytics data.");
+            return Try.failure(new IllegalArgumentException("URL cannot be null or empty"));
+        }
+
+        return dataSourceProvider.fetchFrom(sourceUrl)
+                .onSuccess(data -> logger.info("Successfully fetched analytics data for URL: {}. Data length: {}", sourceUrl, data.length()))
+                .onFailure(error -> logger.error("Failed to fetch analytics data for URL: {}. Error: {}", sourceUrl, error.getMessage(), error));
     }
 }
