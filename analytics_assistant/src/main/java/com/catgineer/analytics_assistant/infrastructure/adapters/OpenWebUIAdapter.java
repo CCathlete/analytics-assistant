@@ -1,7 +1,6 @@
 package com.catgineer.analytics_assistant.infrastructure.adapters;
 
 import com.catgineer.analytics_assistant.domain.SafeRunner;
-import com.catgineer.analytics_assistant.domain.model.ChartData;
 import com.catgineer.analytics_assistant.infrastructure.ports.AIProvider;
 import io.vavr.control.Try;
 import jakarta.annotation.PostConstruct;
@@ -21,7 +20,8 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Component
 @Profile("!mock")
@@ -111,6 +111,32 @@ public class OpenWebUIAdapter implements AIProvider {
         }
     }
 
+    private String internalExtractCsv(String aiResponse) {
+        logger.info("Extracting CSV content from AI response.");
+        
+        if (aiResponse == null || aiResponse.isBlank()) {
+            throw new IllegalArgumentException("Cannot extract data from empty response");
+        }
+
+        Pattern pattern = Pattern.compile("(?s)```(?:csv)?\\n(.*?)\\n```");
+        Matcher matcher = pattern.matcher(aiResponse);
+
+        String cleanCsv;
+        if (matcher.find()) {
+            cleanCsv = matcher.group(1).trim();
+            logger.debug("CSV found within markdown blocks.");
+        } else {
+            cleanCsv = aiResponse.trim();
+            logger.debug("No markdown blocks found, using raw response.");
+        }
+
+        if (cleanCsv.isEmpty()) {
+            throw new IllegalStateException("Extracted CSV is empty");
+        }
+
+        return cleanCsv;
+    }
+
     // --- Public API ---
 
     @Override
@@ -142,9 +168,7 @@ public class OpenWebUIAdapter implements AIProvider {
     }
 
     @Override
-    public Flux<Try<ChartData>> extractChartData(String aiResponse) {
-        return SafeRunner.futureStreamList(() -> List.of(
-                new ChartData("Item A", ThreadLocalRandom.current().nextDouble(10, 50))
-        ));
+    public Flux<Try<String>> extractChartData(String aiResponse) {
+        return SafeRunner.futureStream(() -> internalExtractCsv(aiResponse));
     }
 }
