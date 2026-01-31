@@ -15,7 +15,7 @@ public class BeanConfiguration {
     }
 
     @Bean
-    public AnalyticsUseCase analyticsUseCase(DataSourceProvider dataSourceProvider) {
-        return new AnalyticsUseCase(dataSourceProvider);
+    public AnalyticsUseCase analyticsUseCase(DataSourceProvider dataSourceProvider, AppConfigData appConfigData) {
+        return new AnalyticsUseCase(dataSourceProvider, appConfigData);
     }
 }
