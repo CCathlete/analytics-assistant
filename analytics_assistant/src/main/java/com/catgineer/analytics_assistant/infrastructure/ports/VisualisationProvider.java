@@ -5,4 +5,5 @@ import reactor.core.publisher.Mono;
 
 public interface VisualisationProvider {
     Mono<Try<Boolean>> updateDataset(String csvData);
+    Mono<Try<Integer>> createChart(String chartName, String vizType, String paramsJson);
 }

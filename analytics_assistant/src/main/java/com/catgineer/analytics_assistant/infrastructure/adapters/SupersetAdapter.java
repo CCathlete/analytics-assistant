@@ -29,6 +29,9 @@ public class SupersetAdapter implements VisualisationProvider {
     private WebClient webClient;
     private String accessToken;
 
+    @Value("${SUPERSET_DATASET_ID}")
+    private Integer datasetId;
+
     @Value("${SUPERSET_BASE_URL}")
     private String supersetBaseUrl;
 
@@ -109,10 +112,47 @@ public class SupersetAdapter implements VisualisationProvider {
         return true;
     }
 
+    private Integer internalCreateChart(String chartName, String vizType, String paramsJson) {
+        if (this.accessToken == null) internalAuthenticate();
+
+        logger.info("Creating chart '{}' for dataset ID: {}", chartName, datasetId);
+
+        // Superset API expects this specific structure
+        Map<String, Object> body = Map.of(
+            "slice_name", chartName,
+            "viz_type", vizType, // e.g., "bar", "table", "pie"
+            "datasource_id", datasetId,
+            "datasource_type", "table",
+            "params", paramsJson // Detailed config: metrics, groupby, etc.
+        );
+
+        JsonNode response = webClient.post()
+                .uri("/api/v1/chart/")
+                .headers(h -> h.setBearerAuth(this.accessToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(body)
+                .retrieve()
+                .bodyToMono(JsonNode.class)
+                .block(Duration.ofSeconds(10));
+
+        if (response == null || !response.has("id")) {
+            throw new RuntimeException("Failed to create chart in Superset");
+        }
+
+        int newChartId = response.get("id").asInt();
+        logger.info("Chart created successfully with ID: {}", newChartId);
+        return newChartId;
+    }
+
     // --- Public API ---
 
     @Override
     public Mono<Try<Boolean>> updateDataset(String csvData) {
         return SafeRunner.futureSafe(() -> internalUploadCsv(csvData));
+    }
+
+    @Override
+    public Mono<Try<Integer>> createChart(String chartName, String vizType, String paramsJson) {
+        return SafeRunner.futureSafe(() -> internalCreateChart(chartName, vizType, paramsJson));
     }
 }
