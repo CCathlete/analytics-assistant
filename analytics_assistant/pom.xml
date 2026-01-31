@@ -65,6 +65,13 @@
 			<version>2.16.1</version> <!-- Use a compatible version with your Spring Boot -->
 		</dependency>
 
+		<!-- Dependency for loading .env files -->
+		<dependency>
+			<groupId>io.github.cdimascio</groupId>
+			<artifactId>dotenv-java</artifactId>
+			<version>3.0.0</version> <!-- Using a recent stable version -->
+		</dependency>
+
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>

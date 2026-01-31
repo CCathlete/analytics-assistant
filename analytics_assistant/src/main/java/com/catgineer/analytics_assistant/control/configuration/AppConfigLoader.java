@@ -8,7 +8,6 @@ import org.springframework.context.annotation.Configuration;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Collections;
 
 @Configuration
 public class AppConfigLoader {
