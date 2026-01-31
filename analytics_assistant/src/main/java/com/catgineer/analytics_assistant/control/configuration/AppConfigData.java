@@ -1,4 +1,4 @@
-package com.catgineer.analytics_assistant.configuration;
+package com.catgineer.analytics_assistant.control.configuration;
 
 import java.util.List;
 

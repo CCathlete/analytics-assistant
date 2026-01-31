@@ -1,6 +1,6 @@
 package com.catgineer.analytics_assistant.application.services;
 
-import com.catgineer.analytics_assistant.configuration.AppConfigData;
+import com.catgineer.analytics_assistant.control.configuration.AppConfigData; // Corrected import
 import com.catgineer.analytics_assistant.infrastructure.ports.DataSourceProvider;
 import io.vavr.collection.List;
 import io.vavr.control.Try;

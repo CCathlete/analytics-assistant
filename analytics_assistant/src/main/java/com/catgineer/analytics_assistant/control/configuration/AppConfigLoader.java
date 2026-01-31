@@ -1,4 +1,4 @@
-package com.catgineer.analytics_assistant.configuration;
+package com.catgineer.analytics_assistant.control.configuration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
