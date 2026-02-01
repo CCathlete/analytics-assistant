@@ -6,11 +6,13 @@ import reactor.core.publisher.Mono;
 
 import java.util.List;
 
+import com.catgineer.analytics_assistant.domain.model.ChartData;
+
 public interface AIProvider {
     Mono<Try<Boolean>> validatePrompt(String prompt);
     Mono<Try<String>> sendPromptToAI(String prompt, List<String> contextData);
     Mono<Try<Boolean>> validateAIResponse(String aiResponse);
-    Flux<Try<String>> extractChartData(String aiResponse);
+    Flux<Try<ChartData>> extractChartData(String aiResponse);
     Mono<Try<Boolean>> embedData(String data);
     Mono<Try<Boolean>> authenticate(String username, String password);
 }

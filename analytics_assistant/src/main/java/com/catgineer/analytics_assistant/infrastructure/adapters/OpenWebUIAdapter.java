@@ -1,6 +1,7 @@
 package com.catgineer.analytics_assistant.infrastructure.adapters;
 
 import com.catgineer.analytics_assistant.domain.SafeRunner;
+import com.catgineer.analytics_assistant.domain.model.ChartData;
 import com.catgineer.analytics_assistant.infrastructure.ports.AIProvider;
 import tools.jackson.databind.JsonNode;
 import io.vavr.control.Try;
@@ -48,14 +49,9 @@ public class OpenWebUIAdapter implements AIProvider {
         this.restClient = RestClient.builder()
                 .baseUrl(openWebUIApiBaseUrl)
                 .build();
-        logger.info("OpenWebUIAdapter (Virtual Thread Mode) initialized for host: {}", scpRemoteHost);
     }
 
-    // --- Private Deterministic Logic ---
-
     private Boolean internalAuthenticate(String username, String password) {
-        logger.info("Authenticating for AI services: {}", username);
-        
         JsonNode res = restClient.post()
                 .uri("/api/v1/auth/login")
                 .body(Map.of("email", username, "password", password))
@@ -63,17 +59,16 @@ public class OpenWebUIAdapter implements AIProvider {
                 .body(JsonNode.class);
 
         if (res == null || res.path("token").isMissingNode()) {
-            logger.error("Authentication failed: No token returned");
             return false;
         }
 
-        this.authToken = res.get("token").asString("");
+        this.authToken = res.get("token").asText("");
         return true;
     }
 
     private String internalSendPrompt(String prompt, List<String> contextData) {
         if (authToken == null) {
-            throw new IllegalStateException("Not authenticated with OpenWebUI");
+            throw new IllegalStateException("Not authenticated");
         }
 
         return restClient.post()
@@ -91,57 +86,31 @@ public class OpenWebUIAdapter implements AIProvider {
 
         try {
             Files.writeString(tempFile, data);
-            logger.info("Transferring data via SCP to: {}", remoteDestination);
-
             ProcessBuilder pb = new ProcessBuilder(
-                    "scp", 
-                    "-o", "StrictHostKeyChecking=no", 
-                    tempFile.toString(), 
-                    remoteDestination
+                    "scp", "-o", "StrictHostKeyChecking=no", 
+                    tempFile.toString(), remoteDestination
             );
-            
-            Process process = pb.start();
-            // This is where Virtual Threads shine: unmounting while waiting for SCP process
-            int exitCode = process.waitFor();
-
-            if (exitCode != 0) {
-                throw new IOException("SCP transfer failed with exit code: " + exitCode);
-            }
-
-            logger.info("SCP transfer completed successfully.");
-            return true;
+            return pb.start().waitFor() == 0;
         } finally {
             Files.deleteIfExists(tempFile);
         }
     }
 
-    private String internalExtractCsv(String aiResponse) {
-        logger.info("Extracting CSV content from AI response.");
-        
+    private ChartData internalExtractChartData(String aiResponse) {
         if (aiResponse == null || aiResponse.isBlank()) {
-            throw new IllegalArgumentException("Cannot extract data from empty response");
+            throw new IllegalArgumentException("Empty response");
         }
 
         Pattern pattern = Pattern.compile("(?s)```(?:csv)?\\n(.*?)\\n```");
         Matcher matcher = pattern.matcher(aiResponse);
-
-        String cleanCsv;
-        if (matcher.find()) {
-            cleanCsv = matcher.group(1).trim();
-            logger.debug("CSV found within markdown blocks.");
-        } else {
-            cleanCsv = aiResponse.trim();
-            logger.debug("No markdown blocks found, using raw response.");
-        }
+        String cleanCsv = matcher.find() ? matcher.group(1).trim() : aiResponse.trim();
 
         if (cleanCsv.isEmpty()) {
-            throw new IllegalStateException("Extracted CSV is empty");
+            throw new IllegalStateException("CSV is empty");
         }
 
-        return cleanCsv;
+        return new ChartData(cleanCsv);
     }
-
-    // --- Public API (Monadic Wrappers) ---
 
     @Override
     public Mono<Try<Boolean>> authenticate(String username, String password) {
@@ -160,10 +129,7 @@ public class OpenWebUIAdapter implements AIProvider {
 
     @Override
     public Mono<Try<Boolean>> validatePrompt(String prompt) {
-        return SafeRunner.futureSafe(() -> {
-            if (prompt == null || prompt.isBlank()) throw new IllegalArgumentException("Empty prompt");
-            return true;
-        });
+        return SafeRunner.futureSafe(() -> prompt != null && !prompt.isBlank());
     }
 
     @Override
@@ -172,7 +138,7 @@ public class OpenWebUIAdapter implements AIProvider {
     }
 
     @Override
-    public Flux<Try<String>> extractChartData(String aiResponse) {
-        return SafeRunner.futureStream(() -> internalExtractCsv(aiResponse));
+    public Flux<Try<ChartData>> extractChartData(String aiResponse) {
+        return SafeRunner.futureStream(() -> internalExtractChartData(aiResponse));
     }
 }
