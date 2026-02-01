@@ -1,40 +1,31 @@
 package com.catgineer.analytics_assistant.control.configuration;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
+import io.vavr.control.Try;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
-import java.io.File;
-import java.io.IOException;
+import org.springframework.core.io.ClassPathResource;
 
 @Configuration
 public class AppConfigLoader {
 
     private static final Logger logger = LoggerFactory.getLogger(AppConfigLoader.class);
-    private static final String CONFIG_FILE_PATH = "input_files/app_config.json";
+    private static final String CONFIG_NAME = "app_config.json";
 
-    @Bean
-    public AppConfigData appConfigData(ObjectMapper objectMapper) {
-        File configFile = new File(CONFIG_FILE_PATH);
-        if (!configFile.exists()) {
-            logger.error("Application configuration file not found: {}. Using empty configuration.", CONFIG_FILE_PATH);
-            return new AppConfigData(); // Return empty config
-        }
+    private AppConfigData internalLoadConfig(ObjectMapper objectMapper) {
+        logger.info("Deterministic load of {} from classpath resources", CONFIG_NAME);
 
-        try {
-            AppConfigData config = objectMapper.readValue(configFile, AppConfigData.class);
-            logger.info("Successfully loaded application configuration from {}", CONFIG_FILE_PATH);
-            return config;
-        } catch (IOException e) {
-            logger.error("Error reading or parsing application configuration file: {}. Error: {}. Using empty configuration.", CONFIG_FILE_PATH, e.getMessage(), e);
-            return new AppConfigData(); // Return empty config on error
-        }
+        return Try.withResources(() -> new ClassPathResource(CONFIG_NAME).getInputStream())
+                .of(inputStream -> objectMapper.readValue(inputStream, AppConfigData.class))
+                .onSuccess(cfg -> logger.info("AppConfigData successfully initialized"))
+                .onFailure(ex -> logger.error("Failed to load config from resources: {}", ex.getMessage()))
+                .getOrElseThrow(() -> new IllegalStateException("Missing app_config.json in resources folder"));
     }
 
     @Bean
-    public ObjectMapper objectMapper() {
-        return new ObjectMapper();
+    public AppConfigData appConfigData(ObjectMapper objectMapper) {
+        return internalLoadConfig(objectMapper);
     }
 }
