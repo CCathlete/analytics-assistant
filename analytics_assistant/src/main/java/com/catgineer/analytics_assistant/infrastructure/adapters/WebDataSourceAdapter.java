@@ -6,38 +6,38 @@ import io.vavr.control.Try;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.client.RestClient;
 import reactor.core.publisher.Mono;
-
-import java.time.Duration;
 
 @Component
 public class WebDataSourceAdapter implements DataSourceProvider {
 
     private static final Logger logger = LoggerFactory.getLogger(WebDataSourceAdapter.class);
-    private final WebClient webClient;
+    private final RestClient restClient;
 
-    public WebDataSourceAdapter(WebClient webClient) {
-        this.webClient = webClient;
+    public WebDataSourceAdapter(RestClient.Builder restClientBuilder) {
+        // We use the builder to allow for global configurations if needed later
+        this.restClient = restClientBuilder.build();
     }
 
     private String internalFetch(String url) {
         if (url == null || url.isBlank()) {
             throw new IllegalArgumentException("Target URL cannot be null or empty");
         }
+        
         logger.info("Fetching raw data from URL: {}", url);
         
-        return webClient.get()
+        // RestClient execution is synchronous. 
+        // On a Virtual Thread, this is as efficient as await.
+        return restClient.get()
                 .uri(url)
                 .retrieve()
-                .bodyToMono(String.class)
-                .block(Duration.ofSeconds(20));
+                .body(String.class);
     }
 
     @Override
     public Mono<Try<String>> fetchFrom(String url) {
-        return SafeRunner.futureSafe(() -> {
-            return internalFetch(url);
-        });
+        // SafeRunner keeps our monadic contract intact for the caller
+        return SafeRunner.futureSafe(() -> internalFetch(url));
     }
 }

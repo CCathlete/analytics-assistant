@@ -2,6 +2,7 @@ package com.catgineer.analytics_assistant.infrastructure.adapters;
 
 import com.catgineer.analytics_assistant.domain.SafeRunner;
 import com.catgineer.analytics_assistant.infrastructure.ports.AIProvider;
+import tools.jackson.databind.JsonNode;
 import io.vavr.control.Try;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
@@ -9,14 +10,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
-import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.client.RestClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -28,8 +28,7 @@ import java.util.regex.Pattern;
 public class OpenWebUIAdapter implements AIProvider {
 
     private static final Logger logger = LoggerFactory.getLogger(OpenWebUIAdapter.class);
-    private final WebClient.Builder webClientBuilder;
-    private WebClient webClient;
+    private RestClient restClient;
     private String authToken;
 
     @Value("${OPENWEBUI_API_BASEURL}")
@@ -44,14 +43,12 @@ public class OpenWebUIAdapter implements AIProvider {
     @Value("${SCP_REMOTE_PATH}")
     private String scpRemotePath;
 
-    public OpenWebUIAdapter(WebClient.Builder webClientBuilder) {
-        this.webClientBuilder = webClientBuilder;
-    }
-
     @PostConstruct
     public void init() {
-        this.webClient = webClientBuilder.baseUrl(openWebUIApiBaseUrl).build();
-        logger.info("OpenWebUIAdapter (SCP mode) initialized for host: {}", scpRemoteHost);
+        this.restClient = RestClient.builder()
+                .baseUrl(openWebUIApiBaseUrl)
+                .build();
+        logger.info("OpenWebUIAdapter (Virtual Thread Mode) initialized for host: {}", scpRemoteHost);
     }
 
     // --- Private Deterministic Logic ---
@@ -59,26 +56,32 @@ public class OpenWebUIAdapter implements AIProvider {
     private Boolean internalAuthenticate(String username, String password) {
         logger.info("Authenticating for AI services: {}", username);
         
-        return webClient.post()
+        JsonNode res = restClient.post()
                 .uri("/api/v1/auth/login")
-                .bodyValue(Map.of("email", username, "password", password))
+                .body(Map.of("email", username, "password", password))
                 .retrieve()
-                .bodyToMono(Map.class)
-                .map(res -> {
-                    this.authToken = (String) res.get("token");
-                    return true;
-                })
-                .block(Duration.ofSeconds(10));
+                .body(JsonNode.class);
+
+        if (res == null || res.path("token").isMissingNode()) {
+            logger.error("Authentication failed: No token returned");
+            return false;
+        }
+
+        this.authToken = res.get("token").asString("");
+        return true;
     }
 
     private String internalSendPrompt(String prompt, List<String> contextData) {
-        return webClient.post()
+        if (authToken == null) {
+            throw new IllegalStateException("Not authenticated with OpenWebUI");
+        }
+
+        return restClient.post()
                 .uri("/chat")
                 .headers(h -> h.setBearerAuth(authToken))
-                .bodyValue(Map.of("prompt", prompt, "context", String.join(" ", contextData)))
+                .body(Map.of("prompt", prompt, "context", String.join(" ", contextData)))
                 .retrieve()
-                .bodyToMono(String.class)
-                .block(Duration.ofSeconds(30));
+                .body(String.class);
     }
 
     private Boolean internalEmbedViaScp(String data) throws Exception {
@@ -98,6 +101,7 @@ public class OpenWebUIAdapter implements AIProvider {
             );
             
             Process process = pb.start();
+            // This is where Virtual Threads shine: unmounting while waiting for SCP process
             int exitCode = process.waitFor();
 
             if (exitCode != 0) {
@@ -137,7 +141,7 @@ public class OpenWebUIAdapter implements AIProvider {
         return cleanCsv;
     }
 
-    // --- Public API ---
+    // --- Public API (Monadic Wrappers) ---
 
     @Override
     public Mono<Try<Boolean>> authenticate(String username, String password) {
