@@ -18,4 +18,4 @@
 
 - The overall purpose is for this app to provide a prompt base data analysis using openwebui, Apache Superset, React (vite) and Jave (spring).
 
--  in @src/main/java/com/catgineer/analytics_assistant/infrastructure/ports/DataSourceProvider.java we return Try<String>, this data is the body of the response we get from the source (GitHub currently). This should be data we embed and the ai assistant should return numerical data we should send to Superset to create charts from
+no no we are not moving from a prompt to list of urls. The urls are meant for the embedding of data. After authenticaiton of the user the front end shows a prompt window and a chart window. The user writes the prompt and the front end sends it to the java backend. The backend passes it to the model written in input_files/app_config.json and the model provides csv data we then use to recreate the dataset table
