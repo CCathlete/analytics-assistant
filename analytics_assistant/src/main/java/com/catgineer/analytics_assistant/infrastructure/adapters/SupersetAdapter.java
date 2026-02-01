@@ -2,157 +2,135 @@ package com.catgineer.analytics_assistant.infrastructure.adapters;
 
 import com.catgineer.analytics_assistant.domain.SafeRunner;
 import com.catgineer.analytics_assistant.infrastructure.ports.VisualisationProvider;
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import io.vavr.control.Try;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Profile;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.http.MediaType;
-import org.springframework.http.client.MultipartBodyBuilder;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
-import org.springframework.web.reactive.function.BodyInserters;
-import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.client.RestClient;
 import reactor.core.publisher.Mono;
 
-import java.time.Duration;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Component
-@Profile("!mock")
 public class SupersetAdapter implements VisualisationProvider {
 
     private static final Logger logger = LoggerFactory.getLogger(SupersetAdapter.class);
-    private final WebClient.Builder webClientBuilder;
-    private WebClient webClient;
+    private final JdbcTemplate jdbcTemplate;
+    private RestClient restClient;
     private String accessToken;
 
-    @Value("${SUPERSET_DATASET_ID}")
-    private Integer datasetId;
+    @Value("${SUPERSET_BASE_URL}") private String baseUrl;
+    @Value("${SUPERSET_USERNAME}") private String username;
+    @Value("${SUPERSET_PASSWORD}") private String password;
 
-    @Value("${SUPERSET_BASE_URL}")
-    private String supersetBaseUrl;
-
-    @Value("${SUPERSET_USERNAME}")
-    private String username;
-
-    @Value("${SUPERSET_PASSWORD}")
-    private String password;
-
-    @Value("${SUPERSET_DATABASE_ID}") // The ID of the DB connection in Superset
-    private String databaseId;
-
-    @Value("${SUPERSET_TABLE_NAME}") // The table name to overwrite/create
-    private String tableName;
-
-    public SupersetAdapter(WebClient.Builder webClientBuilder) {
-        this.webClientBuilder = webClientBuilder;
+    public SupersetAdapter(JdbcTemplate jdbcTemplate) {
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     @PostConstruct
     public void init() {
-        this.webClient = webClientBuilder.baseUrl(supersetBaseUrl).build();
-        logger.info("SupersetAdapter initialized targeting database ID: {} and table: {}", databaseId, tableName);
+        // RestClient is the 2026 standard for sync-but-scalable I/O
+        this.restClient = RestClient.builder()
+                .baseUrl(baseUrl)
+                .build();
+        logger.info("SupersetAdapter initialized on Virtual Threads with base URL: {}", baseUrl);
     }
 
-    // --- Private Deterministic Logic ---
-
-    private String internalAuthenticate() {
-        logger.info("Authenticating with Superset for user: {}", username);
-
-        JsonNode response = webClient.post()
+    private String authenticate() {
+        logger.debug("Authenticating Superset user: {}", username);
+        
+        JsonNode res = restClient.post()
                 .uri("/api/v1/security/login")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(Map.of(
-                        "username", username,
-                        "password", password,
-                        "provider", "db"
-                ))
+                .body(Map.of("username", username, "password", password, "provider", "db"))
                 .retrieve()
-                .bodyToMono(JsonNode.class)
-                .block(Duration.ofSeconds(10));
+                .body(JsonNode.class);
 
-        if (response == null || !response.has("access_token")) {
-            throw new RuntimeException("Failed to obtain access token from Superset");
+        if (res == null || res.path("access_token").isMissingNode()) {
+            throw new RuntimeException("Superset auth failed: No token in response");
         }
-
-        this.accessToken = response.get("access_token").asText();
+        
+        this.accessToken = res.get("access_token").asString("");
         return this.accessToken;
     }
 
-    private Boolean internalUploadCsv(String csvData) {
-        if (this.accessToken == null) {
-            internalAuthenticate();
+    private Boolean internalOverwriteTable(String tableName, List<Map<String, Object>> data) {
+        if (data.isEmpty()) {
+            logger.warn("No data for table {}", tableName);
+            return true;
         }
 
-        logger.info("Uploading CSV data directly to Superset table: {}", tableName);
-
-        MultipartBodyBuilder builder = new MultipartBodyBuilder();
-        // Convert the string to a ByteArrayResource to simulate a file upload
-        builder.part("file", new ByteArrayResource(csvData.getBytes()))
-               .filename(tableName + ".csv")
-               .contentType(MediaType.TEXT_PLAIN);
+        jdbcTemplate.execute("DROP TABLE IF EXISTS " + tableName);
         
-        builder.part("table_name", tableName);
-        builder.part("database_id", databaseId);
-        builder.part("if_exists", "replace"); // This ensures we overwrite the data
+        Map<String, Object> firstRow = data.get(0);
+        String columns = firstRow.keySet().stream()
+                .map(k -> k + " TEXT")
+                .collect(Collectors.joining(", "));
+        
+        jdbcTemplate.execute("CREATE TABLE " + tableName + " (" + columns + ")");
 
-        webClient.post()
-                .uri("/api/v1/database/{id}/import_csv", databaseId)
-                .headers(h -> h.setBearerAuth(this.accessToken))
-                .contentType(MediaType.MULTIPART_FORM_DATA)
-                .body(BodyInserters.fromMultipartData(builder.build()))
-                .retrieve()
-                .toBodilessEntity()
-                .block(Duration.ofSeconds(30));
-
-        logger.info("Successfully uploaded and replaced dataset in Superset.");
+        String placeholders = firstRow.keySet().stream().map(k -> "?").collect(Collectors.joining(","));
+        String sql = "INSERT INTO " + tableName + " VALUES (" + placeholders + ")";
+        
+        List<Object[]> batchArgs = data.stream()
+                .map(row -> row.values().toArray())
+                .collect(Collectors.toList());
+        
+        jdbcTemplate.batchUpdate(sql, batchArgs);
         return true;
     }
 
-    private Integer internalCreateChart(String chartName, String vizType, String paramsJson) {
-        if (this.accessToken == null) internalAuthenticate();
-
-        logger.info("Creating chart '{}' for dataset ID: {}", chartName, datasetId);
-
-        // Superset API expects this specific structure
-        Map<String, Object> body = Map.of(
-            "slice_name", chartName,
-            "viz_type", vizType, // e.g., "bar", "table", "pie"
-            "datasource_id", datasetId,
-            "datasource_type", "table",
-            "params", paramsJson // Detailed config: metrics, groupby, etc.
-        );
-
-        JsonNode response = webClient.post()
-                .uri("/api/v1/chart/")
-                .headers(h -> h.setBearerAuth(this.accessToken))
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(body)
+    private Boolean internalRefresh(Integer datasetId) {
+        if (accessToken == null) authenticate();
+        
+        restClient.put()
+                .uri("/api/v1/dataset/{id}/refresh", datasetId)
+                .headers(h -> h.setBearerAuth(accessToken))
                 .retrieve()
-                .bodyToMono(JsonNode.class)
-                .block(Duration.ofSeconds(10));
-
-        if (response == null || !response.has("id")) {
-            throw new RuntimeException("Failed to create chart in Superset");
-        }
-
-        int newChartId = response.get("id").asInt();
-        logger.info("Chart created successfully with ID: {}", newChartId);
-        return newChartId;
+                .toBodilessEntity(); // Pure synchronous wait
+        
+        return true;
     }
 
-    // --- Public API ---
+    private Integer internalCreateChart(Integer datasetId, String name, String type, String params) {
+        if (accessToken == null) authenticate();
+        
+        JsonNode res = restClient.post()
+                .uri("/api/v1/chart/")
+                .headers(h -> h.setBearerAuth(accessToken))
+                .body(Map.of(
+                    "slice_name", name,
+                    "viz_type", type,
+                    "datasource_id", datasetId,
+                    "datasource_type", "table",
+                    "params", params
+                ))
+                .retrieve()
+                .body(JsonNode.class);
+        
+        int chartId = (res != null) ? res.path("id").asInt(-1) : -1;
+        if (chartId == -1) throw new RuntimeException("Chart creation failed");
 
-    @Override
-    public Mono<Try<Boolean>> updateDataset(String csvData) {
-        return SafeRunner.futureSafe(() -> internalUploadCsv(csvData));
+        return chartId;
     }
 
     @Override
-    public Mono<Try<Integer>> createChart(String chartName, String vizType, String paramsJson) {
-        return SafeRunner.futureSafe(() -> internalCreateChart(chartName, vizType, paramsJson));
+    public Mono<Try<Boolean>> overwritePhysicalTable(String tableName, List<Map<String, Object>> data) {
+        return SafeRunner.futureSafe(() -> internalOverwriteTable(tableName, data));
+    }
+
+    @Override
+    public Mono<Try<Boolean>> refreshDataset(Integer datasetId) {
+        return SafeRunner.futureSafe(() -> internalRefresh(datasetId));
+    }
+
+    @Override
+    public Mono<Try<Integer>> createChart(Integer datasetId, String chartName, String vizType, String paramsJson) {
+        return SafeRunner.futureSafe(() -> internalCreateChart(datasetId, chartName, vizType, paramsJson));
     }
 }
