@@ -8,7 +8,6 @@ import tools.jackson.databind.JsonNode;
 import io.vavr.control.Try;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.http.MediaType;
 import reactor.core.publisher.Mono;
@@ -21,7 +20,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-@Component
 public class OpenWebUIAdapter implements AIProvider {
 
     private static final Logger logger = LoggerFactory.getLogger(OpenWebUIAdapter.class);

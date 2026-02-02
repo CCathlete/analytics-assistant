@@ -7,7 +7,6 @@ import io.vavr.control.Try;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import reactor.core.publisher.Mono;
 
@@ -15,7 +14,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-@Component
 public class SupersetAdapter implements VisualisationProvider {
 
     private static final Logger logger = LoggerFactory.getLogger(SupersetAdapter.class);

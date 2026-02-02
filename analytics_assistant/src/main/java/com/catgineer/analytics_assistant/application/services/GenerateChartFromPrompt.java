@@ -9,7 +9,6 @@ import com.catgineer.analytics_assistant.domain.services.VisualisationService;
 import io.vavr.control.Try;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
@@ -18,7 +17,6 @@ import static io.vavr.API.*;
 import static io.vavr.Patterns.$Failure;
 import static io.vavr.Patterns.$Success;
 
-@Service
 public class GenerateChartFromPrompt {
 
     private static final Logger logger = LoggerFactory.getLogger(GenerateChartFromPrompt.class);

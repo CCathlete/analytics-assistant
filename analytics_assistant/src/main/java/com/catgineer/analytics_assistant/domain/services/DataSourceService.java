@@ -6,7 +6,6 @@ import com.catgineer.analytics_assistant.infrastructure.ports.DataSourceProvider
 import io.vavr.control.Try;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
 import static io.vavr.API.*;
@@ -15,7 +14,6 @@ import static io.vavr.Patterns.$Success;
 
 import java.util.List;
 
-@Service
 public class DataSourceService {
 
     private static final Logger logger = LoggerFactory.getLogger(DataSourceService.class);

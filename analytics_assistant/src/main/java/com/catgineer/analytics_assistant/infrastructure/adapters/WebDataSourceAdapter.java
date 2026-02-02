@@ -5,11 +5,9 @@ import com.catgineer.analytics_assistant.infrastructure.ports.DataSourceProvider
 import io.vavr.control.Try;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import reactor.core.publisher.Mono;
 
-@Component
 public class WebDataSourceAdapter implements DataSourceProvider {
 
     private static final Logger logger = LoggerFactory.getLogger(WebDataSourceAdapter.class);

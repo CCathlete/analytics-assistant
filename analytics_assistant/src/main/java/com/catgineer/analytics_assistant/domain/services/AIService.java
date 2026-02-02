@@ -6,7 +6,6 @@ import com.catgineer.analytics_assistant.infrastructure.ports.AIProvider;
 import io.vavr.control.Try;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 import static io.vavr.API.*;
@@ -15,7 +14,6 @@ import static io.vavr.Patterns.$Success;
 
 import java.util.List;
 
-@Service
 public class AIService {
 
     private static final Logger logger = LoggerFactory.getLogger(AIService.class);
