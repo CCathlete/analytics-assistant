@@ -38,79 +38,24 @@ public class GenerateChartFromPrompt {
     ) throws Exception {
             logger.info("Executing ingestion and generation flow for model: {}", modelName);
 
-        // STEP 1: Ingestion
-        // fetchMultipleSources returns Flux<Try<SourceData>>, so we get a List<Try<SourceData>>
-        List<Try<SourceData>> ingestionResults = dataSourceService.fetchMultipleSources(sourceUrls)
-                .collectList()
-                .toFuture()
-                .get();
-        // STEP 2: Explicitly process results and trigger Embedding
-        //
-        List<Try<Boolean>> embeddingResults = ingestionResults.stream()
-                .map(sourceResult -> Match(sourceResult).of(
-                        Case($Success($()), (SourceData data) -> {
-                            logger.debug("Source fetched: {}. Triggering embedding.", data.sourceUrl());
-                            
-                            Try<Try<Boolean>> embedOperation = Try.of(() -> 
-                                aiService.embedData(data.content()).toFuture().get()
-                            );
 
-                            return Match(embedOperation).of(
-                                Case($Success($()), (Try<Boolean> embeddingSuccessTry) -> {
-                                    logger.info("Embedding call completed for {}", data.sourceUrl());
-                                    return embeddingSuccessTry;
-                                }),
-                                Case($Failure($()), ex -> {
-                                    logger.error("IO Failure during embedding for {}", data.sourceUrl());
-                                    return Try.<Boolean>failure(ex);
-                                })
-                            );
-                        }),
-                        Case($Failure($()), ex -> {
-                            logger.warn("Source fetch failed, skipping embedding: {}", ex.getMessage());
-                            return Try.<Boolean>failure(ex);
-                        })
-                )).toList();
-
-        // Explicit Validation of the Embedding Phase.
-        long successfulEmbeddings = embeddingResults.stream()
-                .filter(res -> res.isSuccess() && res.get())
-                .count();
-
-        if (successfulEmbeddings == 0 && !sourceUrls.isEmpty()) {
-            logger.error("Data platform halt: 0/%d sources embedded successfully.", sourceUrls.size());
-            throw new RuntimeException("Knowledge base ingestion failed - aborting generation");
-        }
-
-        logger.info("Ingestion complete. {} sources ready in knowledge base.", successfulEmbeddings);
-
-        // STEP 3: Generate Chart Data
+        // Generation of Chart Data.
         //
         Try<ChartDataSet> aiResult = aiService.generateChartData(prompt, modelName)
-
                 .toFuture()
-
                 .get();
 
 
 
         ChartDataSet dataSet = Match(aiResult).of(
-
                 Case($Success($()), data -> data),
-
                 Case($Failure($()), ex -> {
-
                     logger.error("AI extraction failed");
-
                     throw new RuntimeException("Generation phase failed", ex);
-
                 })
-
         );
 
-
-
-        // STEP 4: Visualisation Sync
+        // Visualisation Sync.
         //
         Try<Integer> syncResult = visualisationService.syncDataToVisualisation(dataSet, targetDatasetId)
                 .toFuture()
