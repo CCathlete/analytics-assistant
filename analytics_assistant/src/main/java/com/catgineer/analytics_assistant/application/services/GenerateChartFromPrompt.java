@@ -115,29 +115,18 @@ public class GenerateChartFromPrompt {
         // STEP 4: Visualisation Sync
         //
         Try<Integer> syncResult = visualisationService.syncDataToVisualisation(dataSet, targetDatasetId)
-
                 .toFuture()
-
                 .get();
 
         return Match(syncResult).of(
-
                 Case($Success($()), id -> {
-
                     logger.info("Successfully synchronized dataset: {}", id);
-
                     return id;
-
                 }),
-
                 Case($Failure($()), ex -> {
-
                     logger.error("Sync failed for dataset: {}", targetDatasetId);
-
                     throw new RuntimeException("Visualisation phase failed", ex);
-
                 })
-
         );
     }
 
