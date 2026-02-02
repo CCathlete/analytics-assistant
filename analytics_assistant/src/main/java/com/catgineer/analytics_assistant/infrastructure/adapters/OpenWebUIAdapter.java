@@ -10,13 +10,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.http.MediaType;
 import reactor.core.publisher.Mono;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -26,19 +26,13 @@ public class OpenWebUIAdapter implements AIProvider {
 
     private static final Logger logger = LoggerFactory.getLogger(OpenWebUIAdapter.class);
     private final RestClient restClient;
-
-    private final String scpRemoteUser;
-    private final String scpRemoteHost;
-    private final String scpRemotePath;
-
+    private final RestClient bridgeClient; // Client for the Android Python bridge(embedding).
 
     public OpenWebUIAdapter(
             RestClient.Builder restClientBuilder, 
             String baseUrl, 
             String apiKey,
-            String scpRemoteUser,
-            String scpRemoteHost,
-            String scpRemotePath
+            String bridgeUrl // Injected from EMBEDDING_NODE_URL.
     ) {
         
         this.restClient = restClientBuilder
@@ -46,11 +40,11 @@ public class OpenWebUIAdapter implements AIProvider {
                 .defaultHeader("Authorization", "Bearer " + apiKey)
                 .build();
 
-        this.scpRemoteUser = scpRemoteUser;
-        this.scpRemoteHost = scpRemoteHost;
-        this.scpRemotePath = scpRemotePath;
+        this.bridgeClient = restClientBuilder
+                .baseUrl(bridgeUrl)
+                .build();
         
-        logger.info("OpenWebUIAdapter initialized with final RestClient for URL: {}", baseUrl);
+        logger.info("OpenWebUIAdapter initialized. Bridge Target: {}", bridgeUrl);
     }
 
     private Boolean internalAuthenticate(String username, String password) {
@@ -82,22 +76,22 @@ public class OpenWebUIAdapter implements AIProvider {
                 .body(String.class);
     }
 
-    private Boolean internalEmbedViaScp(String data) throws Exception {
-        logger.info("Starting SCP transfer.");
-        Path tempFile = Files.createTempFile("embed_", ".txt");
-        try {
-            Files.writeString(tempFile, data);
-            ProcessBuilder pb = new ProcessBuilder("scp", "-o", "StrictHostKeyChecking=no", 
-                tempFile.toString(), String.format("%s@%s:%s", scpRemoteUser, scpRemoteHost, scpRemotePath));
-            
-            int exitCode = pb.start().waitFor();
-            boolean success = exitCode == 0;
-            if (success) logger.info("SCP transfer successful.");
-            else logger.error("SCP transfer failed with exit code: {}", exitCode);
-            return success;
-        } finally {
-            Files.deleteIfExists(tempFile);
-        }
+    private Boolean internalEmbedViaBridge(String data) {
+        String fileName = "embed_" + UUID.randomUUID() + ".txt";
+        logger.info("Pushing data to Android bridge: {}", fileName);
+        
+        var response = bridgeClient.post()
+                .uri("/" + fileName)
+                .contentType(MediaType.TEXT_PLAIN)
+                .body(data)
+                .retrieve()
+                .toBodilessEntity();
+
+        boolean success = response.getStatusCode().is2xxSuccessful();
+        if (success) logger.info("Data successfully pushed to Android node.");
+        else logger.error("Bridge transfer failed with status: {}", response.getStatusCode());
+        
+        return success;
     }
 
     private ChartDataSet internalExtractDataSet(String prompt, String aiResponse) {
@@ -146,6 +140,6 @@ public class OpenWebUIAdapter implements AIProvider {
 
     @Override
     public Mono<Try<Boolean>> embedData(String data) {
-        return SafeRunner.futureSafe(() -> internalEmbedViaScp(data));
+        return SafeRunner.futureSafe(() -> internalEmbedViaBridge(data));
     }
 }

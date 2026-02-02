@@ -1,43 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <configuration>
 
     <property name="LOGS" value="./logs" />
 
-    <appender name="Console"
-        class="ch.qos.logback.core.ConsoleAppender">
+    <appender name="Console" class="ch.qos.logback.core.ConsoleAppender">
         <layout class="ch.qos.logback.classic.PatternLayout">
             <Pattern>
-                %black(%d{ISO8601}) %highlight(%-5level) [%blue(%t)] %yellow(%C{1.}): %msg%n%throwable
+                %black(%d{ISO8601}) %highlight(%-5level) [%blue(%t)] %yellow(%C{1}): %msg%n%throwable
             </Pattern>
         </layout>
     </appender>
 
-    <appender name="RollingFile"
-        class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <appender name="RollingFile" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>${LOGS}/analytics-assistant.log</file>
-        <encoder
-            class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
-            <Pattern>%d %p %C{1.} [%t] %m%n</Pattern>
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <Pattern>%d %p %C{1} [%t] %m%n</Pattern>
         </encoder>
 
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <!-- daily rollover -->
             <fileNamePattern>${LOGS}/archived/analytics-assistant.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
-            <timeBasedFileNamingAndTriggeringPolicy
-                class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+            <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
                 <maxFileSize>10MB</maxFileSize>
             </timeBasedFileNamingAndTriggeringPolicy>
-            <!--
-              IMPORTANT: maxHistory is set to 0.
-              This ensures that when the log file reaches maxFileSize,
-              it is effectively overwritten instead of being archived.
-            -->
+            
             <maxHistory>0</maxHistory>
             <totalSizeCap>0</totalSizeCap>
         </rollingPolicy>
-
     </appender>
 
-    <!-- LOG everything at INFO level -->
     <root level="info">
         <appender-ref ref="RollingFile" />
         <appender-ref ref="Console" />

@@ -71,17 +71,13 @@ public class BeanConfiguration {
             RestClient.Builder builder,
             @Value("${OPENWEBUI_API_BASEURL}") String baseUrl,
             @Value("${OPENWEBUI_API_KEY}") String apiKey,
-            @Value("${SCP_REMOTE_USER}") String scpUser,
-            @Value("${SCP_REMOTE_HOST}") String scpHost,
-            @Value("${SCP_REMOTE_PATH}") String scpPath
+            @Value("${EMBEDDING_NODE_URL}") String bridgeUrl
     ) {
         return new OpenWebUIAdapter(
             builder, 
             baseUrl, 
             apiKey, 
-            scpUser, 
-            scpHost, 
-            scpPath
+            bridgeUrl
         );
     }
 

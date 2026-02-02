@@ -2,7 +2,7 @@ let SessionLoad = 1
 let s:so_save = &g:so | let s:siso_save = &g:siso | setg so=0 siso=0 | setl so=-1 siso=-1
 let v:this_session=expand("<sfile>:p")
 let NvimTreeSetup =  1 
-let TabbyTabNames = "{\"1\":\"App\",\"2\":\"Terminal\"}"
+let TabbyTabNames = "{\"2\":\"Env\",\"1\":\"App\",\"4\":\"Configjson\",\"3\":\"Terminal\"}"
 let NvimTreeRequired =  1 
 silent only
 silent tabonly
@@ -16,29 +16,35 @@ if &shortmess =~ 'A'
 else
   set shortmess=aoO
 endif
-badd +1461 term://~/Repos/analytics-assistant/analytics_assistant//6650:/usr/bin/fish
+badd +32 term://~/Repos/analytics-assistant/analytics_assistant//11850:/usr/bin/fish
 badd +218 term://~/Repos/analytics-assistant/analytics_assistant//6761:/usr/bin/fish
 badd +5 src/main/java/com/catgineer/analytics_assistant/infrastructure/ports/DataSourceProvider.java
-badd +81 src/main/java/com/catgineer/analytics_assistant/infrastructure/adapters/OpenWebUIAdapter.java
-badd +30 src/main/java/com/catgineer/analytics_assistant/infrastructure/adapters/WebDataSourceAdapter.java
+badd +35 src/main/java/com/catgineer/analytics_assistant/infrastructure/adapters/OpenWebUIAdapter.java
+badd +1 src/main/java/com/catgineer/analytics_assistant/infrastructure/adapters/WebDataSourceAdapter.java
 badd +2 src/main/java/com/catgineer/analytics_assistant/infrastructure/ports/VisualisationProvider.java
 badd +13 src/main/java/com/catgineer/analytics_assistant/infrastructure/ports/AIProvider.java
+badd +1 src/main/java/com/catgineer/analytics_assistant/AnalyticsAssistantApplication.java
+badd +0 src/main/resources/app_config.json
+badd +1 ~/Repos/analytics-assistant/.env
+badd +1 ~/Repos/analytics-assistant/.gitignore
+badd +1 src/main/java/com/catgineer/analytics_assistant/control/configuration/BeanConfiguration.java
+badd +8 ~/Repos/newspipe/.env
+badd +0 ~/Repos/pipeline_infra/.env
+badd +20 ~/Repos/pipeline_infra/env.auto.tfvars
+badd +10 ~/Repos/Cat-Assistant/.env
+badd +22 ~/Repos/infra-stuff/fish/config.fish
+badd +43 ~/.config/fish/functions/infra.fish
 argglobal
 %argdel
 $argadd NvimTree_1
 set stal=2
 tabnew +setlocal\ bufhidden=wipe
+tabnew +setlocal\ bufhidden=wipe
+tabnew +setlocal\ bufhidden=wipe
 tabrewind
-edit src/main/java/com/catgineer/analytics_assistant/infrastructure/adapters/OpenWebUIAdapter.java
-wincmd t
-let s:save_winminheight = &winminheight
-let s:save_winminwidth = &winminwidth
-set winminheight=0
-set winheight=1
-set winminwidth=0
-set winwidth=1
+edit src/main/java/com/catgineer/analytics_assistant/AnalyticsAssistantApplication.java
 argglobal
-balt src/main/java/com/catgineer/analytics_assistant/infrastructure/adapters/WebDataSourceAdapter.java
+balt src/main/java/com/catgineer/analytics_assistant/control/configuration/BeanConfiguration.java
 setlocal foldmethod=manual
 setlocal foldexpr=0
 setlocal foldmarker={{{,}}}
@@ -49,20 +55,17 @@ setlocal foldnestmax=20
 setlocal foldenable
 silent! normal! zE
 let &fdl = &fdl
-let s:l = 85 - ((18 * winheight(0) + 14) / 29)
+let s:l = 1 - ((0 * winheight(0) + 16) / 32)
 if s:l < 1 | let s:l = 1 | endif
 keepjumps exe s:l
 normal! zt
-keepjumps 85
+keepjumps 1
 normal! 0
 lcd ~/Repos/analytics-assistant/analytics_assistant
 tabnext
+edit ~/Repos/analytics-assistant/.env
 argglobal
-if bufexists(fnamemodify("term://~/Repos/analytics-assistant/analytics_assistant//6761:/usr/bin/fish", ":p")) | buffer term://~/Repos/analytics-assistant/analytics_assistant//6761:/usr/bin/fish | else | edit term://~/Repos/analytics-assistant/analytics_assistant//6761:/usr/bin/fish | endif
-if &buftype ==# 'terminal'
-  silent file term://~/Repos/analytics-assistant/analytics_assistant//6761:/usr/bin/fish
-endif
-balt term://~/Repos/analytics-assistant/analytics_assistant//6650:/usr/bin/fish
+balt ~/.config/fish/functions/infra.fish
 setlocal foldmethod=manual
 setlocal foldexpr=0
 setlocal foldmarker={{{,}}}
@@ -71,12 +74,57 @@ setlocal foldlevel=0
 setlocal foldminlines=1
 setlocal foldnestmax=20
 setlocal foldenable
-let s:l = 28 - ((27 * winheight(0) + 14) / 29)
+silent! normal! zE
+let &fdl = &fdl
+let s:l = 1 - ((0 * winheight(0) + 16) / 32)
 if s:l < 1 | let s:l = 1 | endif
 keepjumps exe s:l
 normal! zt
-keepjumps 28
+keepjumps 1
+normal! 030|
+lcd ~/Repos/analytics-assistant/analytics_assistant
+tabnext
+argglobal
+if bufexists(fnamemodify("term://~/Repos/analytics-assistant/analytics_assistant//6761:/usr/bin/fish", ":p")) | buffer term://~/Repos/analytics-assistant/analytics_assistant//6761:/usr/bin/fish | else | edit term://~/Repos/analytics-assistant/analytics_assistant//6761:/usr/bin/fish | endif
+if &buftype ==# 'terminal'
+  silent file term://~/Repos/analytics-assistant/analytics_assistant//6761:/usr/bin/fish
+endif
+balt term://~/Repos/analytics-assistant/analytics_assistant//11850:/usr/bin/fish
+setlocal foldmethod=manual
+setlocal foldexpr=0
+setlocal foldmarker={{{,}}}
+setlocal foldignore=#
+setlocal foldlevel=0
+setlocal foldminlines=1
+setlocal foldnestmax=20
+setlocal foldenable
+let s:l = 1959 - ((26 * winheight(0) + 16) / 32)
+if s:l < 1 | let s:l = 1 | endif
+keepjumps exe s:l
+normal! zt
+keepjumps 1959
 normal! 048|
+lcd ~/Repos/analytics-assistant/analytics_assistant
+tabnext
+edit ~/Repos/analytics-assistant/analytics_assistant/src/main/resources/app_config.json
+argglobal
+balt term://~/Repos/analytics-assistant/analytics_assistant//6761:/usr/bin/fish
+setlocal foldmethod=manual
+setlocal foldexpr=0
+setlocal foldmarker={{{,}}}
+setlocal foldignore=#
+setlocal foldlevel=0
+setlocal foldminlines=1
+setlocal foldnestmax=20
+setlocal foldenable
+silent! normal! zE
+let &fdl = &fdl
+let s:l = 1 - ((0 * winheight(0) + 16) / 32)
+if s:l < 1 | let s:l = 1 | endif
+keepjumps exe s:l
+normal! zt
+keepjumps 1
+normal! 0
 lcd ~/Repos/analytics-assistant/analytics_assistant
 tabnext 1
 set stal=1
