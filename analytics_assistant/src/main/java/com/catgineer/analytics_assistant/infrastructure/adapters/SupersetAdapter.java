@@ -4,10 +4,8 @@ import com.catgineer.analytics_assistant.domain.SafeRunner;
 import com.catgineer.analytics_assistant.infrastructure.ports.VisualisationProvider;
 import tools.jackson.databind.JsonNode;
 import io.vavr.control.Try;
-import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -25,20 +23,23 @@ public class SupersetAdapter implements VisualisationProvider {
     private RestClient restClient;
     private String accessToken;
 
-    @Value("${SUPERSET_BASE_URL}") private String baseUrl;
-    @Value("${SUPERSET_USERNAME}") private String username;
-    @Value("${SUPERSET_PASSWORD}") private String password;
+    private String username;
+    private String password;
 
-    public SupersetAdapter(JdbcTemplate jdbcTemplate) {
+    public SupersetAdapter(
+        RestClient.Builder builder,
+        JdbcTemplate jdbcTemplate,
+        String baseUrl,
+        String username,
+        String password
+    ) {
         this.jdbcTemplate = jdbcTemplate;
-    }
-
-    @PostConstruct
-    public void init() {
-        // RestClient is the 2026 standard for sync-but-scalable I/O
         this.restClient = RestClient.builder()
                 .baseUrl(baseUrl)
                 .build();
+        this.username = username;
+        this.password = password;
+
         logger.info("SupersetAdapter initialized on Virtual Threads with base URL: {}", baseUrl);
     }
 
