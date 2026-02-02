@@ -23,11 +23,6 @@ import org.springframework.web.client.RestClient;
 public class BeanConfiguration {
 
     @Bean
-    public RestClient.Builder restClient(RestClient.Builder restClientBuilder) {
-        return restClientBuilder;
-    }
-
-    @Bean
     public HikariDataSource dataSource(
             @Value("${DB_HOST}") String host,
             @Value("${DB_PORT}") String port,
@@ -60,21 +55,20 @@ public class BeanConfiguration {
     }
 
     @Bean
-    public DataSourceProvider dataSourceAdapter(RestClient.Builder restClientBuilder) {
-        return new WebDataSourceAdapter(restClientBuilder);
+    public DataSourceProvider dataSourceAdapter() {
+        return new WebDataSourceAdapter(RestClient.builder());
     }
 
     // --- Infrastructure ---
 
     @Bean
     public OpenWebUIAdapter openWebUIAdapter(
-            RestClient.Builder builder,
             @Value("${OPENWEBUI_API_BASEURL}") String baseUrl,
             @Value("${OPENWEBUI_API_KEY}") String apiKey,
             @Value("${EMBEDDING_NODE_URL}") String bridgeUrl
     ) {
         return new OpenWebUIAdapter(
-            builder, 
+            RestClient.builder(), 
             baseUrl, 
             apiKey, 
             bridgeUrl
@@ -83,14 +77,13 @@ public class BeanConfiguration {
 
     @Bean
     public VisualisationProvider supersetAdapter(
-            RestClient.Builder builder,
             JdbcTemplate dbConnection,
             @Value("${SUPERSET_BASE_URL}") String baseUrl,
             @Value("${SUPERSET_USERNAME}") String userName,
             @Value("${SUPERSET_PASSWORD}") String password 
     ){
         return new SupersetAdapter(
-            builder,
+            RestClient.builder(), 
             dbConnection,
             baseUrl,
             userName,
