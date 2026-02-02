@@ -6,11 +6,8 @@ import com.catgineer.analytics_assistant.domain.model.ChartDataSet;
 import com.catgineer.analytics_assistant.infrastructure.ports.AIProvider;
 import tools.jackson.databind.JsonNode;
 import io.vavr.control.Try;
-import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import reactor.core.publisher.Mono;
@@ -25,37 +22,36 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Component
-@Profile("!mock")
 public class OpenWebUIAdapter implements AIProvider {
 
     private static final Logger logger = LoggerFactory.getLogger(OpenWebUIAdapter.class);
-    private RestClient restClient;
+    private final RestClient restClient;
 
-    @Value("${OPENWEBUI_API_BASEURL}")
-    private String openWebUIApiBaseUrl;
+    private final String scpRemoteUser;
+    private final String scpRemoteHost;
+    private final String scpRemotePath;
 
-    @Value("${OPENWEBUI_API_KEY}")
-    private String apiKey;
 
-    @Value("${SCP_REMOTE_USER}")
-    private String scpRemoteUser;
-
-    @Value("${SCP_REMOTE_HOST}")
-    private String scpRemoteHost;
-
-    @Value("${SCP_REMOTE_PATH}")
-    private String scpRemotePath;
-
-    @PostConstruct
-    public void init() {
-        this.restClient = RestClient.builder()
-                .baseUrl(openWebUIApiBaseUrl)
+    public OpenWebUIAdapter(
+            RestClient.Builder restClientBuilder, 
+            String baseUrl, 
+            String apiKey,
+            String scpRemoteUser,
+            String scpRemoteHost,
+            String scpRemotePath
+    ) {
+        
+        this.restClient = restClientBuilder
+                .baseUrl(baseUrl)
                 .defaultHeader("Authorization", "Bearer " + apiKey)
                 .build();
-        logger.info("OpenWebUIAdapter initialized for URL: {}", openWebUIApiBaseUrl);
-    }
 
-    // --- Private Deterministic Logic ---
+        this.scpRemoteUser = scpRemoteUser;
+        this.scpRemoteHost = scpRemoteHost;
+        this.scpRemotePath = scpRemotePath;
+        
+        logger.info("OpenWebUIAdapter initialized with final RestClient for URL: {}", baseUrl);
+    }
 
     private Boolean internalAuthenticate(String username, String password) {
         logger.info("Verifying credentials for: {}", username);
@@ -122,8 +118,6 @@ public class OpenWebUIAdapter implements AIProvider {
 
         return new ChartDataSet(prompt, points);
     }
-
-    // --- Public Port Implementation (Monadic Wrappers) ---
 
     @Override
     public Mono<Try<Boolean>> authenticate(String username, String password) {

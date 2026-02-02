@@ -2,39 +2,47 @@ package com.catgineer.analytics_assistant.control.configuration;
 
 import com.catgineer.analytics_assistant.application.services.AnalyticsUseCase;
 import com.catgineer.analytics_assistant.domain.services.AIService;
-import com.catgineer.analytics_assistant.infrastructure.adapters.MockOpenWebUIAdapter;
-import com.catgineer.analytics_assistant.infrastructure.adapters.OpenWebUIAdapter; // Added import for real adapter
+import com.catgineer.analytics_assistant.infrastructure.adapters.OpenWebUIAdapter;
 import com.catgineer.analytics_assistant.infrastructure.adapters.WebDataSourceAdapter;
 import com.catgineer.analytics_assistant.infrastructure.ports.AIProvider;
 import com.catgineer.analytics_assistant.infrastructure.ports.DataSourceProvider;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile; // Added import
-import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.client.RestClient;
 
 @Configuration
 public class BeanConfiguration {
 
     @Bean
-    public WebClient webClient(WebClient.Builder webClientBuilder) { // Injects a builder provided by Spring Boot
-        return webClientBuilder.build();
+    public RestClient.Builder restClient(RestClient.Builder restClientBuilder) { // Injects a builder provided by Spring Boot
+        return restClientBuilder;
     }
 
     @Bean
-    public DataSourceProvider dataSourceProvider(WebClient webClient) {
-        return new WebDataSourceAdapter(webClient);
+    public DataSourceProvider dataSourceProvider(RestClient.Builder restClientBuilder) {
+        return new WebDataSourceAdapter(restClientBuilder);
     }
 
     @Bean
-    @Profile("mock") // This bean will be active when "mock" profile is active
-    public AIProvider mockAiProvider(WebClient webClient) {
-        return new MockOpenWebUIAdapter(webClient);
-    }
-
-    @Bean
-    @Profile("!mock") // This bean will be active when "mock" profile is NOT active
-    public AIProvider realAiProvider(WebClient.Builder webClientBuilder) {
-        return new OpenWebUIAdapter(webClientBuilder);
+    public OpenWebUIAdapter openWebUIAdapter(
+            RestClient.Builder builder,
+            @Value("${OPENWEBUI_API_BASEURL}") String baseUrl,
+            @Value("${OPENWEBUI_API_KEY}") String apiKey,
+            @Value("${SCP_REMOTE_USER}") String scpUser,
+            @Value("${SCP_REMOTE_HOST}") String scpHost,
+            @Value("${SCP_REMOTE_PATH}") String scpPath
+    ) {
+        return new OpenWebUIAdapter(
+            builder, 
+            baseUrl, 
+            apiKey, 
+            scpUser, 
+            scpHost, 
+            scpPath
+        );
     }
 
     @Bean
