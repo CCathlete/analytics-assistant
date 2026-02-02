@@ -75,7 +75,8 @@ public class OpenWebUIAdapter implements AIProvider {
     }
 
     private Boolean internalEmbedViaBridge(String data) {
-        final int LIMIT = 150 * 1024; // 150KB limit
+        // final int LIMIT = 150 * 1024; // 150KB limit
+        final int LIMIT = 700; // 700B limit
         final String sourceId = UUID.randomUUID().toString().substring(0, 8);
         final int totalLength = data.length();
         final int totalChunks = (int) Math.ceil((double) totalLength / LIMIT);
