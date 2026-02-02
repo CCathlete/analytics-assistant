@@ -1,82 +1,68 @@
 package com.catgineer.analytics_assistant.control.controllers;
 
-import com.catgineer.analytics_assistant.application.services.AnalyticsUseCase;
-import com.catgineer.analytics_assistant.domain.model.ChartData;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
-import reactor.core.publisher.Flux;
+import com.catgineer.analytics_assistant.application.services.GenerateChartFromPrompt;
+import com.catgineer.analytics_assistant.domain.services.AIService;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static io.vavr.API.*;
-import static io.vavr.Patterns.*; // For $Success and $Failure
+import static io.vavr.Patterns.$Failure;
+import static io.vavr.Patterns.$Success;
+
+record AuthRequest(String username, String password) {}
+record ChartRequest(String prompt, String modelName, List<String> sourceUrls, Integer targetDatasetId) {}
+record ChartResponse(Integer datasetId, String supersetUrl) {}
 
 @RestController
+@RequestMapping("/api/v1")
+@CrossOrigin(origins = "*")
 public class AnalyticsController {
 
-    private static final Logger logger = LoggerFactory.getLogger(AnalyticsController.class);
+    private final GenerateChartFromPrompt generateChartService;
+    private final AIService aiService;
+    
+    private final String supersetBaseUrl;
 
-    private final AnalyticsUseCase analyticsUseCase;
-
-    public AnalyticsController(AnalyticsUseCase analyticsUseCase) {
-        this.analyticsUseCase = analyticsUseCase;
+    public AnalyticsController(
+            GenerateChartFromPrompt generateChartService, 
+            AIService aiService,
+            @Value("${SUPERSET_BASE_URL}") String supersetBaseUrl
+    ) {
+        this.generateChartService = generateChartService;
+        this.aiService = aiService;
+        this.supersetBaseUrl = supersetBaseUrl;
     }
 
-    @GetMapping("/api/analytics")
-    public Mono<ResponseEntity<?>> getAnalytics(@RequestParam String prompt) {
-        logger.info("Received request for analytics with prompt: {}", prompt);
-        return analyticsUseCase.getAnalyticsData(prompt)
-                .collectList() // Collect Flux<Try<ChartData>> into Mono<List<Try<ChartData>>>
-                .map(tryChartDataList -> {
-                    List<ChartData> successfulCharts = tryChartDataList.stream()
-                            .filter(Try::isSuccess)
-                            .map(Try::get)
-                            .collect(Collectors.toList());
-
-                    List<String> errors = tryChartDataList.stream()
-                            .filter(Try::isFailure)
-                            .map(Try::getCause)
-                            .map(Throwable::getMessage)
-                            .collect(Collectors.toList());
-
-                    if (!errors.isEmpty()) {
-                        logger.warn("Errors encountered during analytics data processing: {}", errors);
-                        return ResponseEntity.badRequest().body("Errors occurred: " + String.join("; ", errors));
-                    } else if (successfulCharts.isEmpty()) {
-                        logger.info("No chart data generated for prompt: {}", prompt);
-                        return ResponseEntity.status(HttpStatus.NO_CONTENT).body("No chart data generated.");
-                    } else {
-                        logger.info("Successfully generated {} chart data entries for prompt: {}", successfulCharts.size(), prompt);
-                        return ResponseEntity.ok().body(successfulCharts);
-                    }
-                })
-                .onErrorResume(error -> {
-                    logger.error("Unexpected error in getAnalytics: {}", error.getMessage(), error);
-                    return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An unexpected error occurred: " + error.getMessage()));
-                });
+    @PostMapping("/auth")
+    public Mono<ResponseEntity<String>> login(@RequestBody AuthRequest request) {
+        return aiService.authenticate(request.username(), request.password())
+            .map(authTry -> Match(authTry).of(
+                Case($Success($(true)), b -> ResponseEntity.ok("Authenticated")),
+                Case($Success($(false)), b -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Credentials")),
+                Case($Failure($()), ex -> ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build())
+            ));
     }
 
-    @PostMapping("/api/auth")
-    public Mono<ResponseEntity<?>> authenticate(@RequestBody AuthRequest authRequest) {
-        logger.info("Received authentication request for user: {}", authRequest.getUsername());
-        return analyticsUseCase.authenticate(authRequest.getUsername(), authRequest.getPassword())
-                .map(tryAuth -> {
-                    if (tryAuth.isSuccess() && tryAuth.get()) {
-                        logger.info("Authentication successful for user: {}", authRequest.getUsername());
-                        return ResponseEntity.ok().body("Authentication successful");
-                    } else {
-                        logger.warn("Authentication failed for user: {}. Reason: {}", authRequest.getUsername(),
-                                tryAuth.isFailure() ? tryAuth.getCause().getMessage() : "Invalid credentials");
-                        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Authentication failed");
-                    }
-                })
-                .onErrorResume(error -> {
-                    logger.error("Unexpected error during authentication for user {}: {}", authRequest.getUsername(), error.getMessage(), error);
-                    return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An unexpected error occurred during authentication."));
-                });
+    @PostMapping("/charts/generate")
+    public Mono<ResponseEntity<ChartResponse>> generateChart(@RequestBody ChartRequest request) {
+        return generateChartService.execute(
+                request.prompt(), 
+                request.modelName(), 
+                request.sourceUrls(), 
+                request.targetDatasetId()
+            )
+            .map(resultTry -> Match(resultTry).of(
+                Case($Success($()), id -> {
+                    // Using the injected ENV var for superset.
+                    String url = String.format("%s/explore/?dataset_id=%d&standalone=true", supersetBaseUrl, id);
+                    return ResponseEntity.ok(new ChartResponse(id, url));
+                }),
+                Case($Failure($()), ex -> ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build())
+            ));
     }
+}
