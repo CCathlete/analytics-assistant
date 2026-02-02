@@ -113,7 +113,7 @@ public class GenerateChartFromPrompt {
 
 
         // STEP 4: Visualisation Sync
-
+        //
         Try<Integer> syncResult = visualisationService.syncDataToVisualisation(dataSet, targetDatasetId)
 
                 .toFuture()
