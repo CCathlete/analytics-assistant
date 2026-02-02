@@ -1,14 +1,21 @@
 package com.catgineer.analytics_assistant.control.controllers;
 
 import com.catgineer.analytics_assistant.application.services.GenerateChartFromPrompt;
+import com.catgineer.analytics_assistant.application.services.IngestSources;
+import com.catgineer.analytics_assistant.control.configuration.AppConfigData;
 import com.catgineer.analytics_assistant.domain.services.AIService;
+
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static io.vavr.API.*;
 import static io.vavr.Patterns.$Failure;
@@ -23,18 +30,25 @@ record ChartResponse(Integer datasetId, String supersetUrl) {}
 @CrossOrigin(origins = "*")
 public class AnalyticsController {
 
+    private static final Logger logger = LoggerFactory.getLogger(AnalyticsController.class);
+    private final IngestSources ingestionService;
     private final GenerateChartFromPrompt generateChartService;
     private final AIService aiService;
+    private final AppConfigData appConfig;
     
     private final String supersetBaseUrl;
 
     public AnalyticsController(
+            IngestSources ingestionService,
             GenerateChartFromPrompt generateChartService, 
             AIService aiService,
+            AppConfigData appConfig, // A bean loaded by Spring.
             @Value("${SUPERSET_BASE_URL}") String supersetBaseUrl
     ) {
+        this.ingestionService = ingestionService;
         this.generateChartService = generateChartService;
         this.aiService = aiService;
+        this.appConfig = appConfig;
         this.supersetBaseUrl = supersetBaseUrl;
     }
 
@@ -65,4 +79,17 @@ public class AnalyticsController {
                 Case($Failure($()), ex -> ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build())
             ));
     }
+
+    // Triggered automatically when the Application Context is ready
+    @EventListener(ApplicationReadyEvent.class)
+    public void onApplicationReady() {
+        List<String> urls = appConfig.getSourceUrls();
+        if (urls != null && !urls.isEmpty()) {
+            ingestionService.execute(urls).subscribe(
+                result -> logger.info("Automatic startup ingestion success: {}", result.isSuccess()),
+                error -> logger.error("Automatic startup ingestion crashed: {}", error.getMessage())
+            );
+        }
+    }
+
 }
