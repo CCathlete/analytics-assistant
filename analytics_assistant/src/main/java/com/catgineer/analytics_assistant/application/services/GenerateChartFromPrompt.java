@@ -2,9 +2,7 @@ package com.catgineer.analytics_assistant.application.services;
 
 import com.catgineer.analytics_assistant.domain.SafeRunner;
 import com.catgineer.analytics_assistant.domain.model.ChartDataSet;
-import com.catgineer.analytics_assistant.domain.model.SourceData;
 import com.catgineer.analytics_assistant.domain.services.AIService;
-import com.catgineer.analytics_assistant.domain.services.DataSourceService;
 import com.catgineer.analytics_assistant.domain.services.VisualisationService;
 import io.vavr.control.Try;
 import org.slf4j.Logger;
@@ -22,14 +20,11 @@ public class GenerateChartFromPrompt {
     private static final Logger logger = LoggerFactory.getLogger(GenerateChartFromPrompt.class);
     private final AIService aiService;
     private final VisualisationService visualisationService;
-    private final DataSourceService dataSourceService;
 
     public GenerateChartFromPrompt(
-            DataSourceService dataSourceService,
             AIService aiService,
             VisualisationService visualisationService
     ) {
-        this.dataSourceService = dataSourceService;
         this.aiService = aiService;
         this.visualisationService = visualisationService;
     }

@@ -1,6 +1,7 @@
 package com.catgineer.analytics_assistant.control.configuration;
 
 import com.catgineer.analytics_assistant.application.services.GenerateChartFromPrompt;
+import com.catgineer.analytics_assistant.application.services.IngestSources;
 import com.catgineer.analytics_assistant.domain.services.AIService;
 import com.catgineer.analytics_assistant.domain.services.DataSourceService;
 import com.catgineer.analytics_assistant.domain.services.VisualisationService;
@@ -111,12 +112,19 @@ public class BeanConfiguration {
     // --- Application Services ---
 
     @Bean
-    public GenerateChartFromPrompt generateChartFromPrompt(
+    public IngestSources ingestSources(
         DataSourceService dataSourceService,
+        AIService aiService
+        ){
+        return new IngestSources(dataSourceService, aiService);
+    }
+
+    @Bean
+    public GenerateChartFromPrompt generateChartFromPrompt(
         AIService aiService,
         VisualisationService visualisationService
         ){
-        return new GenerateChartFromPrompt(dataSourceService, aiService, visualisationService);
+        return new GenerateChartFromPrompt(aiService, visualisationService);
     }
 
 }
