@@ -9,6 +9,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
+import static io.vavr.API.*;
+import static io.vavr.Patterns.$Failure;
+import static io.vavr.Patterns.$Success;
+
 import java.util.List;
 
 @Service
@@ -51,11 +55,26 @@ public class AIService {
     }
 
     private Boolean internalAuthenticate(String username, String password) throws Exception {
-        logger.debug("Executing synchronous authentication for: {}", username);
+        logger.info("Executing synchronous authentication for: {}", username);
         return aiProvider.authenticate(username, password)
                 .toFuture()
                 .get()
                 .getOrElseThrow(() -> new RuntimeException("Authentication provider unreachable"));
+    }
+
+    private Boolean internalEmbedData(String data) throws Exception {
+        logger.info("Initiating data embedding into knowledge base");
+        Try<Boolean> result = aiProvider.embedData(data).toFuture().get();
+        
+        return Match(result).of(
+            Case($Success($(true)), () -> {
+                logger.info("Data embedded successfully.");
+                return true;
+            }),
+            Case($Failure($()), () -> { 
+                throw new RuntimeException("Embedding process failed"); 
+            })
+        );
     }
 
     public Mono<Try<ChartDataSet>> generateChartData(String prompt, String modelName) {
@@ -66,5 +85,9 @@ public class AIService {
     public Mono<Try<Boolean>> authenticate(String username, String password) {
         logger.info("Public Entry: Initiating authentication for user: {}", username);
         return SafeRunner.futureSafe(() -> internalAuthenticate(username, password));
+    }
+
+    public Mono<Try<Boolean>> embedData(String data) {
+        return SafeRunner.futureSafe(() -> internalEmbedData(data));
     }
 }

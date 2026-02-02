@@ -1,6 +1,9 @@
 package com.catgineer.analytics_assistant.control.configuration;
 
+import com.catgineer.analytics_assistant.application.services.GenerateChartFromPrompt;
 import com.catgineer.analytics_assistant.domain.services.AIService;
+import com.catgineer.analytics_assistant.domain.services.DataSourceService;
+import com.catgineer.analytics_assistant.domain.services.VisualisationService;
 import com.catgineer.analytics_assistant.infrastructure.adapters.OpenWebUIAdapter;
 import com.catgineer.analytics_assistant.infrastructure.adapters.SupersetAdapter;
 import com.catgineer.analytics_assistant.infrastructure.adapters.WebDataSourceAdapter;
@@ -83,7 +86,7 @@ public class BeanConfiguration {
     }
 
     @Bean
-    public VisualisationProvider visualisationProvider(
+    public VisualisationProvider supersetAdapter(
             RestClient.Builder builder,
             JdbcTemplate dbConnection,
             @Value("${SUPERSET_BASE_URL}") String baseUrl,
@@ -106,6 +109,25 @@ public class BeanConfiguration {
         return new AIService(aiProvider);
     }
 
+    @Bean
+    public DataSourceService dataSourceService(DataSourceProvider dataSourceAdapter) {
+        return new DataSourceService(dataSourceAdapter);
+    }
+
+    @Bean
+    public VisualisationService visualisationService(VisualisationProvider supersetAdapter) {
+        return new VisualisationService(supersetAdapter);
+    }
+
     // --- Application Services ---
+
+    @Bean
+    public GenerateChartFromPrompt generateChartFromPrompt(
+        DataSourceService dataSourceService,
+        AIService aiService,
+        VisualisationService visualisationService
+        ){
+        return generateChartFromPrompt(dataSourceService, aiService, visualisationService);
+    }
 
 }
