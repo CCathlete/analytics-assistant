@@ -83,13 +83,34 @@ public class AnalyticsController {
     // Triggered automatically when the Application Context is ready
     @EventListener(ApplicationReadyEvent.class)
     public void onApplicationReady() {
+        logger.info("Application Ready Event received. Checking AppConfigData...");
+        
         List<String> urls = appConfig.getSourceUrls();
-        if (urls != null && !urls.isEmpty()) {
-            ingestionService.execute(urls).subscribe(
-                result -> logger.info("Automatic startup ingestion success: {}", result.isSuccess()),
-                error -> logger.error("Automatic startup ingestion crashed: {}", error.getMessage())
-            );
+        
+        if (urls == null) {
+            logger.error("AppConfigData.getSourceUrls() returned NULL. Check app_config.json mapping.");
+            return;
         }
+
+        if (urls.isEmpty()) {
+            logger.warn("AppConfigData is present but sourceUrls list is EMPTY.");
+            return;
+        }
+
+        logger.info("Found {} URLs in config. Triggering IngestSources...", urls.size());
+
+        ingestionService.execute(urls)
+            .doOnSubscribe(s -> logger.info("Ingestion subscription activated."))
+            .subscribe(
+                result -> {
+                    if (result.isSuccess()) {
+                        logger.info("Automatic startup ingestion completed successfully.");
+                    } else {
+                        logger.error("Automatic startup ingestion failed: {}", result.getCause().getMessage());
+                    }
+                },
+                error -> logger.error("Fatal error in ingestion stream: {}", error.getMessage())
+            );
     }
 
 }
