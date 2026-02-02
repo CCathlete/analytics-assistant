@@ -116,7 +116,7 @@ public class BeanConfiguration {
         AIService aiService,
         VisualisationService visualisationService
         ){
-        return generateChartFromPrompt(dataSourceService, aiService, visualisationService);
+        return new GenerateChartFromPrompt(dataSourceService, aiService, visualisationService);
     }
 
 }
