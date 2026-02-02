@@ -1,5 +1,5 @@
 {
-  "source_urls": [
+  "sourceUrls": [
     "https://api.github.com/repos/vavr-io/vavr/commits",
     "https://api.github.com/repos/spring-projects/spring-boot/commits"
   ]
