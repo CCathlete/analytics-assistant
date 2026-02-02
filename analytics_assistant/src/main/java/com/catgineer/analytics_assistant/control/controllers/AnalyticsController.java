@@ -27,7 +27,6 @@ record ChartResponse(Integer datasetId, String supersetUrl) {}
 
 @RestController
 @RequestMapping("/api/v1")
-@CrossOrigin(origins = "*")
 public class AnalyticsController {
 
     private static final Logger logger = LoggerFactory.getLogger(AnalyticsController.class);
