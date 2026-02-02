@@ -75,21 +75,47 @@ public class OpenWebUIAdapter implements AIProvider {
     }
 
     private Boolean internalEmbedViaBridge(String data) {
-        String fileName = "embed_" + UUID.randomUUID() + ".txt";
-        logger.info("Pushing data to Android bridge: {}", fileName);
-        
-        var response = bridgeClient.post()
-                .uri("/" + fileName)
-                .contentType(MediaType.TEXT_PLAIN)
-                .body(data)
-                .retrieve()
-                .toBodilessEntity();
+        final int LIMIT = 150 * 1024; // 150KB limit
+        final String sourceId = UUID.randomUUID().toString().substring(0, 8);
+        final int totalLength = data.length();
+        final int totalChunks = (int) Math.ceil((double) totalLength / LIMIT);
 
-        boolean success = response.getStatusCode().is2xxSuccessful();
-        if (success) logger.info("Data successfully pushed to Android node.");
-        else logger.error("Bridge transfer failed with status: {}", response.getStatusCode());
+        logger.info("Content size: {} bytes. Splitting into {} chunks for Source ID: {}", 
+                    totalLength, totalChunks, sourceId);
+
+        boolean allSuccessful = true;
+
+        for (int i = 0; i < totalChunks; i++) {
+            int start = i * LIMIT;
+            int end = Math.min(start + LIMIT, totalLength);
+            String chunk = data.substring(start, end);
+
+            // Naming convention: embed_[sourceId]_[chunkIndex]_of_[total].txt
+            String fileName = String.format("embed_%s_%d_of_%d.txt", sourceId, i + 1, totalChunks);
+            
+            logger.info("Pushing chunk {}/{} to Android bridge: {}", i + 1, totalChunks, fileName);
+
+            var response = bridgeClient.post()
+                    .uri("/" + fileName)
+                    .contentType(MediaType.TEXT_PLAIN)
+                    .body(chunk)
+                    .retrieve()
+                    .toBodilessEntity();
+
+            if (!response.getStatusCode().is2xxSuccessful()) {
+                logger.error("Chunk {} failed with status: {}", i + 1, response.getStatusCode());
+                allSuccessful = false;
+                break; // Stop if one chunk fails to maintain integrity
+            }
+        }
+
+        if (allSuccessful) {
+            logger.info(
+                "All {} chunks for Source {} successfully pushed to Android node.",
+                totalChunks, sourceId);
+        }
         
-        return success;
+        return allSuccessful;
     }
 
     private ChartDataSet internalExtractDataSet(String prompt, String aiResponse) {
