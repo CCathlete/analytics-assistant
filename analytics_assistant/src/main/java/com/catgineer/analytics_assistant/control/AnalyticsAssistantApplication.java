@@ -10,7 +10,6 @@ import org.springframework.core.task.support.TaskExecutorAdapter;
 
 import io.netty.util.concurrent.ThreadPerTaskExecutor;
 
-import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 
 @SpringBootApplication
