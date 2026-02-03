@@ -74,15 +74,19 @@ public class SupersetAdapter implements VisualisationProvider {
         }
 
         jdbcTemplate.execute("DROP TABLE IF EXISTS " + targetTableName);
+        logger.info("Table {} dropped successfully", targetTableName);
         
         Map<String, Object> firstRow = data.get(0);
         String columnsDefinition = firstRow.entrySet().stream()
                 .map(entry -> entry.getKey() + " " + inferPostgresType(String.valueOf(entry.getValue())))
                 .collect(Collectors.joining(", "));
+        logger.info("Columns definition for table creation: {}", columnsDefinition);
         
         jdbcTemplate.execute("CREATE TABLE " + targetTableName + " (" + columnsDefinition + ")");
 
         String columnNames = String.join(", ", firstRow.keySet());
+        logger.info("Column names for insertion: {}", columnNames);
+
         String placeholders = firstRow.keySet().stream().map(k -> "?").collect(Collectors.joining(","));
         String sql = String.format(
             "INSERT INTO %s (%s) VALUES (%s)",
@@ -94,6 +98,7 @@ public class SupersetAdapter implements VisualisationProvider {
         List<Object[]> batchArgs = data.stream()
                 .map(row -> row.values().toArray())
                 .collect(Collectors.toList());
+        logger.info("Data for insertion: {}", batchArgs);
         
         jdbcTemplate.batchUpdate(sql, batchArgs);
         return true;
