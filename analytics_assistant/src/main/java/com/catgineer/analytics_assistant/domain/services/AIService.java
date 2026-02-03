@@ -23,8 +23,30 @@ public class AIService {
         this.aiProvider = aiProvider;
     }
 
+    private String internalInferSchema(String prompt, String modelName) throws Exception {
+        String schemaPrompt = String.format(
+                "Please provide a schema for a csv based on this: %s. Output ONLY the comma-separated column names.", 
+                prompt
+        );
+        
+        logger.info("[STEP 1 - PROMPT]: {}", schemaPrompt);
+        
+        Try<String> schemaResponse = aiProvider.sendPromptToAI(modelName, schemaPrompt, List.of())
+                .toFuture().get();
+        
+        String schema = schemaResponse.getOrElseThrow(() -> 
+                new RuntimeException("Failed to infer schema from AI"));
+
+        logger.info("[STEP 1 - RESPONSE]: {}", schema);
+        return schema;
+    }
+
     private ChartDataSet internalGenerateChartData(String prompt, String modelName) throws Exception {
         logger.info("Starting deterministic AI generation sequence with model: {}", modelName);
+
+        // Step 1: Infer Schema
+        String schema = internalInferSchema(prompt, modelName);
+        logger.info("Crystallized Schema: {}", schema);
 
         Try<Boolean> validation = aiProvider.validatePrompt(prompt).toFuture().get();
         if (validation.isFailure() || !validation.get()) {
@@ -32,22 +54,39 @@ public class AIService {
             throw new IllegalArgumentException("Prompt validation failed");
         }
 
-        logger.debug("Dispatching prompt to AI Provider for CSV generation");
-        Try<String> aiResponse = aiProvider.sendPromptToAI(modelName, prompt, List.of()).toFuture().get();
-        String csvContent = aiResponse.getOrElseThrow(() -> new RuntimeException("AI provider returned no content"));
+        // Step 2: Build Structured Prompt with inferred schema
+        String structuredPrompt = String.format("""
+                TASK: %s
+                FORMAT: Output ONLY raw CSV.
+                COLUMNS: %s
+                NEGATIVE CONSTRAINT: No prose, no markdown code blocks.
+                If no data matches, return ONLY the header: %s
+                """, prompt, schema, schema);
 
-        logger.debug("Validating AI response structure");
+        logger.info("[STEP 2 - PROMPT]: {}", structuredPrompt);
+        
+        Try<String> aiResponse = aiProvider.sendPromptToAI(modelName, structuredPrompt, List.of())
+                .toFuture().get();
+        
+        String csvContent = aiResponse.getOrElseThrow(() -> 
+                new RuntimeException("AI provider returned no content"));
+
+        logger.info("[STEP 2 - RESPONSE]: {}", csvContent);
+
+        logger.info("Validating AI response structure");
         Try<Boolean> responseValidation = aiProvider.validateAIResponse(csvContent).toFuture().get();
+        
         if (responseValidation.isFailure() || !responseValidation.get()) {
-            logger.error("AI response failed structural validation");
+            logger.error("AI response failed structural validation for content: [{}]", csvContent);
             throw new IllegalStateException("Malformed AI response");
         }
 
-        logger.info("Extracting ChartDataSet from AI response");
-        Try<ChartDataSet> extractionResult = aiProvider.extractChartDataSet(prompt, csvContent).toFuture().get();
+        logger.info("Extracting ChartDataSet from CSV content");
+        Try<ChartDataSet> extractionResult = aiProvider.extractChartDataSet(prompt, csvContent)
+                .toFuture().get();
         
         return extractionResult.getOrElseThrow(() -> {
-            logger.error("Failed to map AI response to ChartDataSet");
+            logger.error("Failed to map AI response to ChartDataSet. Content was: {}", csvContent);
             return new RuntimeException("Data extraction failed");
         });
     }
@@ -86,6 +125,7 @@ public class AIService {
     }
 
     public Mono<Try<Boolean>> embedData(String data) {
+        logger.info("Public Entry: Embedding content");
         return SafeRunner.futureSafe(() -> internalEmbedData(data));
     }
 }
