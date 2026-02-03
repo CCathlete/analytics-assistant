@@ -143,22 +143,15 @@ public class SupersetAdapter implements VisualisationProvider {
 
     private Boolean internalRefresh() {
         if (accessToken == null) authenticate();
-        // restClient.delete()
-        //     .uri("/api/v1/dataset/")
-        //     .headers(h -> h.setBearerAuth(accessToken))
-        //     .retrieve()
-        //     .toBodilessEntity();
-
         restClient.put()
-            .uri("/api/v1/dataset/{id}", targetDatasetId)
-            .headers(h -> h.setBearerAuth(accessToken))
-            .retrieve()
-            .onStatus(HttpStatusCode::isError, (req, res) -> {
-                String errorBody = new String(res.getBody().readAllBytes(), StandardCharsets.UTF_8);
-                logger.error("Metadata sync failed for dataset {}. Response: {}", targetDatasetId, errorBody);
+                .uri("/api/v1/dataset/{id}", targetDatasetId)
+                .headers(h -> h.setBearerAuth(accessToken))
+                .retrieve()
+                .onStatus(HttpStatusCode::isError, (req, res) -> {
+                    String errorBody = new String(res.getBody().readAllBytes(), StandardCharsets.UTF_8);
+                    logger.error("Metadata sync failed for dataset {}. Response: {}", targetDatasetId, errorBody);
                 })
-            .toBodilessEntity();
-
+                .toBodilessEntity();
         return true;
     }
 
