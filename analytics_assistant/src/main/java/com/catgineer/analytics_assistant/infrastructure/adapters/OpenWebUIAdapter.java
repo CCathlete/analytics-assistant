@@ -9,6 +9,7 @@ import io.vavr.control.Try;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.client.RestClient;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import reactor.core.publisher.Mono;
 
@@ -19,6 +20,9 @@ import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
+record ChatMessage(String role, String content) {}
+record ChatCompletionRequest(String model, List<ChatMessage> messages) {}
 
 public class OpenWebUIAdapter implements AIProvider {
 
@@ -64,25 +68,23 @@ public class OpenWebUIAdapter implements AIProvider {
 
     private String internalSendPrompt(String model, String prompt, List<String> contextData) {
         final String urlSuffix = "/api/chat/completions";
-        logger.info("Sending AI prompt: {}.", prompt);
-        logger.info("URL: {}.", baseUrl + urlSuffix);
-        logger.info("Body: {}.",
-                    Map.of(
-                    "model", model,
-                    "messages", List.of(Map.of("role", "user", "content", prompt))
-                )
+        
+        ChatCompletionRequest requestBody = new ChatCompletionRequest(
+            model, 
+            List.of(new ChatMessage("user", prompt))
         );
+
+        logger.info("Dispatching AI Request to {}/{}", baseUrl, urlSuffix);
+
+        // We use .bodyValue() instead of .body() for simpler object mapping
         return restClient.post()
                 .uri(urlSuffix)
-                .header("Content-Type", "application/json")
-                .body(Map.of(
-                    "model", model,
-                    "messages", List.of(
-                        // Map.of("role", "user", "content", prompt + "\nContext: " + String.join("\n", contextData))
-                        Map.of("role", "user", "content", prompt)
-                    )
-                ))
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(requestBody) // Jackson handles the record conversion
                 .retrieve()
+                .onStatus(HttpStatusCode::isError, (req, res) -> {
+                    logger.error("OpenWebUI rejected request with status: {}", res.getStatusCode());
+                })
                 .body(String.class);
     }
 
