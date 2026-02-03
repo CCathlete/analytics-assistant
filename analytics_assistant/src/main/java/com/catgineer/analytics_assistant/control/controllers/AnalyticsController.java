@@ -82,7 +82,7 @@ public class AnalyticsController {
             .map(resultTry -> Match(resultTry).of(
                 Case($Success($()), id -> {
                     // Using the injected ENV var for superset.
-                    String url = String.format("%s/explore/?dataset_id=%d&standalone=true", supersetBaseUrl, id);
+                    String url = String.format("%s/explore/?dataset_id=%d", supersetBaseUrl, id);
                     return ResponseEntity.ok(new ChartResponse(id, url));
                 }),
                 Case($Failure($()), ex -> ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build())
