@@ -19,13 +19,18 @@ public class IngestSources {
     private static final Logger logger = LoggerFactory.getLogger(IngestSources.class);
     private final DataSourceService dataSourceService;
     private final AIService aiService;
+    private final Boolean embeddingEnabled;
 
-    public IngestSources(DataSourceService dataSourceService, AIService aiService) {
+    public IngestSources(DataSourceService dataSourceService, AIService aiService, Boolean embeddingEnabled) {
         this.dataSourceService = dataSourceService;
         this.aiService = aiService;
+        this.embeddingEnabled = embeddingEnabled;
     }
 
     private Boolean internalIngest(List<String> urls) throws Exception {
+
+        if (!embeddingEnabled) {return true;} 
+
         logger.info("Starting ingestion for {} sources", urls.size());
 
         List<Try<SourceData>> ingestionResults = dataSourceService.fetchMultipleSources(urls)

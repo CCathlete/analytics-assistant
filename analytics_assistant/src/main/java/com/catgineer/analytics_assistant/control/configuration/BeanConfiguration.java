@@ -127,9 +127,10 @@ public class BeanConfiguration {
     @Bean
     public IngestSources ingestSources(
         DataSourceService dataSourceService,
-        AIService aiService
+        AIService aiService,
+        @Value("${ENABLE_EMBEDDING}") Boolean embeddingEnabled
         ){
-        return new IngestSources(dataSourceService, aiService);
+        return new IngestSources(dataSourceService, aiService, embeddingEnabled);
     }
 
     @Bean
