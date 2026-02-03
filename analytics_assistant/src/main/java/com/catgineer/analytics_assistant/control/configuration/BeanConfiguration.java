@@ -69,6 +69,7 @@ public class BeanConfiguration {
     @Bean
     public OpenWebUIAdapter openWebUIAdapter(
             @Value("${OPENWEBUI_API_BASEURL}") String baseUrl,
+            @Value("${SUPERSET_DATASET_ID}") String targetDatasetId,
             @Value("${OPENWEBUI_API_KEY}") String apiKey,
             @Value("${EMBEDDING_NODE_URL}") String bridgeUrl
     ) {
@@ -84,6 +85,7 @@ public class BeanConfiguration {
         return new OpenWebUIAdapter(
             builder, 
             baseUrl, 
+            targetDatasetId,
             apiKey, 
             bridgeUrl
         );

@@ -9,7 +9,7 @@ public record ChartDataSet(
     List<ChartData> dataPoints,
     Instant extractedAt
 ) {
-    public ChartDataSet(String sourcePrompt, List<ChartData> dataPoints) {
-        this(java.util.UUID.randomUUID().toString(), sourcePrompt, dataPoints, Instant.now());
+    public ChartDataSet(String id, String sourcePrompt, List<ChartData> dataPoints) {
+        this(id, sourcePrompt, dataPoints, Instant.now());
     }
 }

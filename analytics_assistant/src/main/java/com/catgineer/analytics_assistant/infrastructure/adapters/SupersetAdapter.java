@@ -6,6 +6,7 @@ import tools.jackson.databind.JsonNode;
 import io.vavr.control.Try;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.client.RestClient;
 import reactor.core.publisher.Mono;
@@ -113,6 +114,9 @@ public class SupersetAdapter implements VisualisationProvider {
                 .uri("/api/v1/dataset/{id}/refresh", targetDatasetId)
                 .headers(h -> h.setBearerAuth(accessToken))
                 .retrieve()
+                .onStatus(HttpStatusCode::isError,
+                    (req, res) ->
+                        logger.error("Metadata sync failed for dataset {}", targetDatasetId)) 
                 .toBodilessEntity();
         return true;
     }

@@ -35,6 +35,7 @@ public class AnalyticsController {
     private final AIService aiService;
     private final AppConfigData appConfig;
     
+    private final Integer targetDatasetId;
     private final String supersetBaseUrl;
     private final Boolean embeddingEnabled;
 
@@ -43,6 +44,7 @@ public class AnalyticsController {
             GenerateChartFromPrompt generateChartService, 
             AIService aiService,
             AppConfigData appConfig, // A bean loaded by Spring.
+            @Value("${SUPERSET_DATASET_ID}") Integer targetDatasetId,
             @Value("${SUPERSET_BASE_URL}") String supersetBaseUrl,
             @Value("${ENABLE_EMBEDDING}") Boolean embeddingEnabled
     ) {
@@ -50,6 +52,7 @@ public class AnalyticsController {
         this.generateChartService = generateChartService;
         this.aiService = aiService;
         this.appConfig = appConfig;
+        this.targetDatasetId = targetDatasetId;
         this.supersetBaseUrl = supersetBaseUrl;
         this.embeddingEnabled = embeddingEnabled;
     }
@@ -69,8 +72,8 @@ public class AnalyticsController {
         return generateChartService.execute(
                 request.prompt(), 
                 request.modelName(), 
-                request.sourceUrls(), 
-                request.targetDatasetId()
+                request.sourceUrls(),
+                targetDatasetId
             )
             .map(resultTry -> Match(resultTry).of(
                 Case($Success($()), id -> {
