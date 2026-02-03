@@ -6,7 +6,6 @@ import tools.jackson.databind.JsonNode;
 import io.vavr.control.Try;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.client.RestClient;
 import reactor.core.publisher.Mono;
@@ -35,8 +34,8 @@ public class SupersetAdapter implements VisualisationProvider {
         String baseUrl,
         String username,
         String password,
-        @Value("${SUPERSET_TABLE_NAME}") String targetTableName,
-        @Value("${SUPERSET_DATASET_ID}") String targetDatasetId
+        String targetTableName,
+        String targetDatasetId
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.restClient = RestClient.builder()

@@ -94,14 +94,18 @@ public class BeanConfiguration {
             JdbcTemplate dbConnection,
             @Value("${SUPERSET_BASE_URL}") String baseUrl,
             @Value("${SUPERSET_USERNAME}") String userName,
-            @Value("${SUPERSET_PASSWORD}") String password 
+            @Value("${SUPERSET_PASSWORD}") String password,
+            @Value("${SUPERSET_TABLE_NAME}") String targetTableName,
+            @Value("${SUPERSET_DATASET_ID}") String targetDatasetId
     ){
         return new SupersetAdapter(
             RestClient.builder(), 
             dbConnection,
             baseUrl,
             userName,
-            password
+            password,
+            targetTableName,
+            targetDatasetId
         );
     }
 
