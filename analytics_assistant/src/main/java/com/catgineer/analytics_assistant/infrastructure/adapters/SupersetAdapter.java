@@ -164,20 +164,6 @@ public class SupersetAdapter implements VisualisationProvider {
                 })
             .body(JsonNode.class);
 
-
-        // restClient.put()
-        //         .uri("/api/v1/dataset/{id}", targetDatasetId)
-        //         .headers(h -> h.setBearerAuth(accessToken))
-        //         .body(Map.of(
-        //             "schema", "public",
-        //             "table_name", targetTableName
-        //         ))
-        //         .retrieve()
-        //         .onStatus(HttpStatusCode::isError, (req, res) -> {
-        //             String errorBody = new String(res.getBody().readAllBytes(), StandardCharsets.UTF_8);
-        //             logger.error("Metadata sync failed for dataset {}. Response: {}", targetDatasetId, errorBody);
-        //             })
-        //         .body(JsonNode.class);
         return true;
     }
 
