@@ -150,7 +150,7 @@ public class SupersetAdapter implements VisualisationProvider {
         //     .toBodilessEntity();
 
         restClient.put()
-            .uri("/api/v1/dataset/{}", targetDatasetId)
+            .uri("/api/v1/dataset/{id}", targetDatasetId)
             .headers(h -> h.setBearerAuth(accessToken))
             .retrieve()
             .onStatus(HttpStatusCode::isError, (req, res) -> {
