@@ -74,7 +74,7 @@ public class OpenWebUIAdapter implements AIProvider {
             List.of(new ChatMessage("user", prompt))
         );
 
-        logger.info("Dispatching AI Request to {}/{}", baseUrl, urlSuffix);
+        logger.info("Dispatching AI Request to {}/{}", baseUrl, urlSuffix.stripLeading());
         logger.info("Request body: {}", requestBody);
 
         return restClient.post()
