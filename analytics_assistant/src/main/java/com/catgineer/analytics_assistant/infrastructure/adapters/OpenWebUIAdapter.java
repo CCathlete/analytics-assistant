@@ -25,6 +25,7 @@ public class OpenWebUIAdapter implements AIProvider {
     private static final Logger logger = LoggerFactory.getLogger(OpenWebUIAdapter.class);
     private final RestClient restClient;
     private final RestClient bridgeClient; // Client for the Android Python bridge(embedding).
+    private final String baseUrl;
 
     public OpenWebUIAdapter(
             RestClient.Builder restClientBuilder, 
@@ -33,6 +34,8 @@ public class OpenWebUIAdapter implements AIProvider {
             String bridgeUrl // Injected from EMBEDDING_NODE_URL.
     ) {
         
+        this.baseUrl = baseUrl;
+
         this.restClient = restClientBuilder
                 .baseUrl(baseUrl)
                 .defaultHeader("Authorization", "Bearer " + apiKey)
@@ -60,14 +63,21 @@ public class OpenWebUIAdapter implements AIProvider {
     }
 
     private String internalSendPrompt(String model, String prompt, List<String> contextData) {
-        logger.info("Sending AI prompt.");
+        final String urlSuffix = "/api/chat/completions";
+        logger.info("Sending AI prompt: {}.", prompt);
+        logger.info("URL: {}.", baseUrl + urlSuffix);
+        logger.info("Body: {}.",
+                    Map.of(
+                    "model", model,
+                    "messages", List.of(Map.of("role", "user", "content", prompt))
+                )
+        );
         return restClient.post()
-                .uri("/api/chat/completions")
+                .uri(urlSuffix)
                 .header("Content-Type", "application/json")
                 .body(Map.of(
                     "model", model,
                     "messages", List.of(
-                        Map.of("role", "system", "content", "Return CSV format only."),
                         // Map.of("role", "user", "content", prompt + "\nContext: " + String.join("\n", contextData))
                         Map.of("role", "user", "content", prompt)
                     )
