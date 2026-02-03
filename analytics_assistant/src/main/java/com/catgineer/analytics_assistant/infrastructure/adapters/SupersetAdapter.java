@@ -44,6 +44,8 @@ public class SupersetAdapter implements VisualisationProvider {
                 .build();
         this.username = username;
         this.password = password;
+        this.targetTableName = targetTableName;
+        this.targetDatasetId = targetDatasetId;
 
         logger.info("SupersetAdapter initialized on Virtual Threads with base URL: {}", baseUrl);
     }
