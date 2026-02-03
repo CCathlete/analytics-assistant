@@ -75,8 +75,8 @@ public class OpenWebUIAdapter implements AIProvider {
         );
 
         logger.info("Dispatching AI Request to {}/{}", baseUrl, urlSuffix);
+        logger.info("Request body: {}", requestBody);
 
-        // We use .bodyValue() instead of .body() for simpler object mapping
         return restClient.post()
                 .uri(urlSuffix)
                 .contentType(MediaType.APPLICATION_JSON)
