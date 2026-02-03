@@ -143,13 +143,18 @@ public class SupersetAdapter implements VisualisationProvider {
     private Boolean internalRefresh() {
         if (accessToken == null) authenticate();
         restClient.put()
-                .uri("/api/v1/dataset/{id}/refresh", targetDatasetId)
-                .headers(h -> h.setBearerAuth(accessToken))
-                .retrieve()
-                .onStatus(HttpStatusCode::isError,
-                    (req, res) ->
-                        logger.error("Metadata sync failed for dataset {}", targetDatasetId)) 
-                .toBodilessEntity();
+            .uri("/api/v1/dataset/")
+            .headers(h -> h.setBearerAuth(accessToken))
+            .body(Map.of(
+                "database", "pg_domain_data",
+                "schema", "public",
+                "table_name", targetTableName
+            ))
+            .retrieve()
+            .onStatus(HttpStatusCode::isError,
+                (req, res) -> logger.error("Metadata sync failed for dataset {}", targetDatasetId)) 
+            .body(JsonNode.class);
+
         return true;
     }
 
