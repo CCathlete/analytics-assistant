@@ -20,6 +20,10 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.client.RestClient;
 
+import org.springframework.http.client.JdkClientHttpRequestFactory;
+import java.net.http.HttpClient;
+import java.time.Duration;
+
 @Configuration
 public class BeanConfiguration {
 
@@ -68,8 +72,17 @@ public class BeanConfiguration {
             @Value("${OPENWEBUI_API_KEY}") String apiKey,
             @Value("${EMBEDDING_NODE_URL}") String bridgeUrl
     ) {
+        HttpClient httpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(10))
+                .build();
+
+        JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(httpClient);
+        factory.setReadTimeout(Duration.ofMinutes(5)); 
+
+        RestClient.Builder builder = RestClient.builder().requestFactory(factory);
+
         return new OpenWebUIAdapter(
-            RestClient.builder(), 
+            builder, 
             baseUrl, 
             apiKey, 
             bridgeUrl
