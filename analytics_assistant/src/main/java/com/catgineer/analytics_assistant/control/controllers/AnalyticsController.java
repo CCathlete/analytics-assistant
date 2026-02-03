@@ -36,6 +36,7 @@ public class AnalyticsController {
     private final AppConfigData appConfig;
     
     private final Integer targetDatasetId;
+    private final String targetTableName;
     private final String supersetBaseUrl;
     private final Boolean embeddingEnabled;
 
@@ -45,6 +46,7 @@ public class AnalyticsController {
             AIService aiService,
             AppConfigData appConfig, // A bean loaded by Spring.
             @Value("${SUPERSET_DATASET_ID}") Integer targetDatasetId,
+            @Value("${SUPERSET_TABLE_NAME}") String targetTableName,
             @Value("${SUPERSET_BASE_URL}") String supersetBaseUrl,
             @Value("${ENABLE_EMBEDDING}") Boolean embeddingEnabled
     ) {
@@ -53,6 +55,7 @@ public class AnalyticsController {
         this.aiService = aiService;
         this.appConfig = appConfig;
         this.targetDatasetId = targetDatasetId;
+        this.targetTableName = targetTableName;
         this.supersetBaseUrl = supersetBaseUrl;
         this.embeddingEnabled = embeddingEnabled;
     }
@@ -73,6 +76,7 @@ public class AnalyticsController {
                 request.prompt(), 
                 request.modelName(), 
                 request.sourceUrls(),
+                targetTableName,
                 targetDatasetId
             )
             .map(resultTry -> Match(resultTry).of(

@@ -146,54 +146,66 @@ public class OpenWebUIAdapter implements AIProvider {
     }
 
     private ChartDataSet internalExtractDataSet(String prompt, String aiResponse) {
-        logger.info("Parsing AI response for ChartDataSet.");
+        logger.info("Parsing AI response for dynamic ChartDataSet.");
 
-        // 1. Extract CSV content (handling potential markdown wrap)
+        // 1. Extract CSV content
         Pattern pattern = Pattern.compile("(?s)```(?:csv)?\\n(.*?)\\n```");
         Matcher matcher = pattern.matcher(aiResponse);
         String csv = matcher.find() ? matcher.group(1).trim() : aiResponse.trim();
 
         if (csv.isEmpty()) {
-            logger.error("Extracted CSV content is empty.");
             throw new IllegalStateException("CSV content missing");
         }
 
-        // 2. Filter and Sanitize lines
+        // 2. Split into lines and filter
         List<String> lines = Arrays.stream(csv.split("\\n"))
                 .map(String::trim)
-                .filter(line -> line.contains(","))
+                .filter(line -> !line.isEmpty() && line.contains(","))
                 .collect(Collectors.toList());
 
         if (lines.isEmpty()) {
-            return new ChartDataSet(targetDatasetId, targetTableName, prompt, List.of());
+            return new ChartDataSet(targetDatasetId.toString(), targetTableName, prompt, List.of());
         }
 
-        // 3. Dynamic Data Mapping
-        // We skip the first line (the header we forced the AI to generate in the Domain layer)
-        // We map parts[0] as the label and the last column as the numeric value
+        // 3. Extract Headers
+        String[] headers = lines.get(0).split(",");
+        for (int i = 0; i < headers.length; i++) {
+            headers[i] = headers[i].trim().toLowerCase().replace(" ", "_"); // Sanitize for Postgres
+        }
+
+        // 4. Map Rows to ChartData
         List<ChartData> points = lines.stream()
-                .skip(1) 
-                .map(line -> line.split(","))
-                .filter(parts -> parts.length >= 2)
-                .map(parts -> {
-                    // Extract value from the last column
-                    String rawValue = parts[parts.length - 1].trim();
-                    Double value = rawValue.matches(
-                        "-?\\d+(\\.\\d+)?"
-                    ) ? Double.parseDouble(rawValue) : 0.0;
+                .skip(1) // Skip header line
+                .map(line -> {
+                    String[] values = line.split(",");
+                    Map<String, Object> columns = new java.util.HashMap<>();
+                    Map<String, String> columnTypes = new java.util.HashMap<>();
 
-                    // Join ALL previous columns to preserve Project Name and Week
-                    // This creates a label like "2026-01-25 | vavr-io"
-                    String label = Arrays.stream(parts)
-                            .limit(parts.length - 1)
-                            .map(String::trim)
-                            .collect(Collectors.joining(" | "));
-
-                    return new ChartData(label, value); // We unpack this in the visualisation domain layer.
-                    })
+                    for (int i = 0; i < headers.length; i++) {
+                        String header = headers[i];
+                        String rawValue = (i < values.length) ? values[i].trim() : "";
+                        
+                        // Populate data and infer type for each column
+                        columns.put(header, rawValue);
+                        columnTypes.put(header, inferPostgresType(rawValue));
+                    }
+                    
+                    return new ChartData(columns, columnTypes);
+                })
                 .collect(Collectors.toList());
 
-        return new ChartDataSet(targetDatasetId, targetTableName, prompt, points);
+            return new ChartDataSet(targetDatasetId.toString(), targetTableName, prompt, points);
+        }
+
+    /**
+     * Helper to determine the PG type during extraction
+     */
+    private String inferPostgresType(String value) {
+        if (value == null || value.isEmpty()) return "TEXT";
+        if (value.equalsIgnoreCase("true") || value.equalsIgnoreCase("false")) return "BOOLEAN";
+        if (value.matches("\\d{4}-\\d{2}-\\d{2}")) return "DATE";
+        if (value.matches("-?\\d+(\\.\\d+)?")) return "NUMERIC";
+        return "TEXT";
     }
 
     @Override

@@ -29,7 +29,7 @@ public class GenerateChartFromPrompt {
         this.visualisationService = visualisationService;
     }
 
-    private Integer internalExecuteFlow(String prompt, String modelName, List<String> sourceUrls, Integer targetDatasetId
+    private Integer internalExecuteFlow(String prompt, String modelName, List<String> sourceUrls, String targetTableName, Integer targetDatasetId
     ) throws Exception {
             logger.info("Executing ingestion and generation flow for model: {}", modelName);
 
@@ -52,7 +52,7 @@ public class GenerateChartFromPrompt {
 
         // Visualisation Sync.
         //
-        Try<Integer> syncResult = visualisationService.syncDataToVisualisation(dataSet, targetDatasetId)
+        Try<Integer> syncResult = visualisationService.syncDataToVisualisation(dataSet, targetTableName, targetDatasetId)
                 .toFuture()
                 .get();
 
@@ -68,7 +68,7 @@ public class GenerateChartFromPrompt {
         );
     }
 
-    public Mono<Try<Integer>> execute(String prompt, String modelName, List<String> sourceUrls, Integer targetDatasetId) {
-        return SafeRunner.futureSafe(() -> internalExecuteFlow(prompt, modelName, sourceUrls, targetDatasetId));
+    public Mono<Try<Integer>> execute(String prompt, String modelName, List<String> sourceUrls, String targetTableName, Integer targetDatasetId) {
+        return SafeRunner.futureSafe(() -> internalExecuteFlow(prompt, modelName, sourceUrls, targetTableName, targetDatasetId));
     }
 }

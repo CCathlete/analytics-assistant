@@ -23,28 +23,26 @@ public class VisualisationService {
     }
 
     /**
-     * Parallel mapping of the inner data points to minimaps. 
+     * Maps domain ChartData points to raw table rows.
+     * Each ChartData now contains a dynamic map of columns derived from the AI schema.
      **/
     private List<Map<String, Object>> internalMapToTableRows(List<ChartData> dataPoints) {
-        logger.debug("Mapping {} domain points to raw table rows", dataPoints.size());
+        logger.debug("Mapping {} dynamic domain points to raw table rows", dataPoints.size());
+        
         return dataPoints.stream()
-                .map(dp -> Map.of(
-                        "label", (Object) dp.getLabel(),
-                        "value", (Object) dp.getValue()
-                ))
+                .map(ChartData::getColumns) // Directly extract the internal Map
                 .collect(Collectors.toList());
     }
 
-    private Integer internalSyncLogic(ChartDataSet dataSet, Integer targetDatasetId) throws Exception {
+    private Integer internalSyncLogic(ChartDataSet dataSet, String targetTableName, Integer targetDatasetId) throws Exception {
         logger.info("Executing deterministic sync logic for dataset id: {}", dataSet.id());
         
         List<Map<String, Object>> rows = internalMapToTableRows(dataSet.dataPoints());
-        String identifier = dataSet.id().replace("-", "_");
 
-        logger.info("Writing {} rows to physical table: {}", rows.size(), identifier);
-        Try<Boolean> writeResult = visualisationProvider.overwritePhysicalTable(identifier, rows).toFuture().get();
+        logger.info("Writing {} rows to physical table: {}", rows.size(), targetTableName);
+        Try<Boolean> writeResult = visualisationProvider.overwritePhysicalTable(targetTableName, rows).toFuture().get();
         if (writeResult.isFailure() || !writeResult.get()) {
-            logger.error("Physical table write failed for {}", identifier);
+            logger.error("Physical table write failed for {}", targetTableName);
             throw new RuntimeException("Data layer write failed");
         }
 
@@ -55,13 +53,13 @@ public class VisualisationService {
             throw new RuntimeException("Presentation refresh failed");
         }
 
-        logger.info("Creating chart for identifier: {}", identifier);
-        Try<Integer> chartResult = visualisationProvider.createChart(targetDatasetId, "Chart_" + identifier, "bar", "{}")
+        logger.info("Creating chart for identifier: {}", targetTableName);
+        Try<Integer> chartResult = visualisationProvider.createChart(targetDatasetId, "Chart_" + targetTableName, "bar", "{}")
                 .toFuture()
                 .get();
 
         Integer chartId = chartResult.getOrElseThrow(() -> {
-            logger.error("Chart creation logic failed for identifier: {}", identifier);
+            logger.error("Chart creation logic failed for identifier: {}", targetTableName);
             return new RuntimeException("Chart creation failed");
         });
 
@@ -69,8 +67,8 @@ public class VisualisationService {
         return chartId;
     }
 
-    public Mono<Try<Integer>> syncDataToVisualisation(ChartDataSet dataSet, Integer targetDatasetId) {
+    public Mono<Try<Integer>> syncDataToVisualisation(ChartDataSet dataSet, String targetTableName, Integer targetDatasetId) {
         logger.info("Orchestrating safe async sync for dataset: {}", dataSet.id());
-        return SafeRunner.futureSafe(() -> internalSyncLogic(dataSet, targetDatasetId));
+        return SafeRunner.futureSafe(() -> internalSyncLogic(dataSet,targetTableName, targetDatasetId));
     }
 }
