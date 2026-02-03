@@ -1,8 +1,9 @@
-import React, { useState, FormEvent } from 'react';
-import { User } from '../types';
+import React, { useState, type FormEvent } from 'react';
+import { type User } from '../types.tsx';
 
 interface LoginFormProps {
-  onSuccess: (user: User) => void;
+    onSuccess: (user: User) => void;
+    isLoading: boolean;
 }
 
 const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {

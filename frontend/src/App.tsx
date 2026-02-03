@@ -1,7 +1,7 @@
 // src/App.tsx
 
 import React, { useState } from 'react';
-import { AuthState, User } from './types';
+import { type AuthState, type User } from './types.tsx';
 import LoginForm from './components/LoginForm';
 import Dashboard from './components/Dashboard';
 
