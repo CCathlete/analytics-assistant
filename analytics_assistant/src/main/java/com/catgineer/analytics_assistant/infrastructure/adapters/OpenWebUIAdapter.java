@@ -85,7 +85,13 @@ public class OpenWebUIAdapter implements AIProvider {
                 .onStatus(HttpStatusCode::isError, (req, res) -> {
                     logger.error("OpenWebUI rejected request with status: {}", res.getStatusCode());
                 })
-                .body(String.class);
+                .body(JsonNode.class) // Get the whole huge response
+                .path("choices")
+                .get(0) // The response has a field 'choices' which is a list of jsons.
+                .path("message")
+                .path("content")
+                .asString("") // This extracts JUST "week,project_name,commit_count"
+                .trim();
     }
 
     private Boolean internalEmbedViaBridge(String data) {
