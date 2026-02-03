@@ -143,8 +143,14 @@ public class SupersetAdapter implements VisualisationProvider {
 
     private Boolean internalRefresh() {
         if (accessToken == null) authenticate();
+        // restClient.delete()
+        //     .uri("/api/v1/dataset/")
+        //     .headers(h -> h.setBearerAuth(accessToken))
+        //     .retrieve()
+        //     .toBodilessEntity();
+
         restClient.put()
-            .uri("/api/v1/dataset/")
+            .uri("/api/v1/dataset/{}", targetDatasetId)
             .headers(h -> h.setBearerAuth(accessToken))
             .body(Map.of(
                 "database", "pg_domain_data",
