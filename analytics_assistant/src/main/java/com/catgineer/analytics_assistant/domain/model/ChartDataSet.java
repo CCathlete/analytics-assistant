@@ -5,11 +5,12 @@ import java.util.List;
 
 public record ChartDataSet(
     String id,
+    String tableName,
     String sourcePrompt,
     List<ChartData> dataPoints,
     Instant extractedAt
 ) {
-    public ChartDataSet(String id, String sourcePrompt, List<ChartData> dataPoints) {
-        this(id, sourcePrompt, dataPoints, Instant.now());
+    public ChartDataSet(String id, String tableName, String sourcePrompt, List<ChartData> dataPoints) {
+        this(id, tableName, sourcePrompt, dataPoints, Instant.now());
     }
 }

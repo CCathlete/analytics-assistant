@@ -70,6 +70,7 @@ public class BeanConfiguration {
     public OpenWebUIAdapter openWebUIAdapter(
             @Value("${OPENWEBUI_API_BASEURL}") String baseUrl,
             @Value("${SUPERSET_DATASET_ID}") String targetDatasetId,
+            @Value("${SUPERSET_TABLE_NAME}") String targetTableName,
             @Value("${OPENWEBUI_API_KEY}") String apiKey,
             @Value("${EMBEDDING_NODE_URL}") String bridgeUrl
     ) {
@@ -86,6 +87,7 @@ public class BeanConfiguration {
             builder, 
             baseUrl, 
             targetDatasetId,
+            targetTableName,
             apiKey, 
             bridgeUrl
         );

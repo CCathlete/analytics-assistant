@@ -31,16 +31,19 @@ public class OpenWebUIAdapter implements AIProvider {
     private final RestClient bridgeClient; // Client for the Android Python bridge(embedding).
     private final String baseUrl;
     private final String targetDatasetId;
+    private final String targetTableName;
 
     public OpenWebUIAdapter(
             RestClient.Builder restClientBuilder, 
             String baseUrl, 
             String targetDatasetId,
+            String targetTableName,
             String apiKey,
             String bridgeUrl // Injected from EMBEDDING_NODE_URL.
     ) {
         
         this.targetDatasetId = targetDatasetId;
+        this.targetTableName = targetTableName;
         this.baseUrl = baseUrl;
 
         this.restClient = restClientBuilder
@@ -162,7 +165,7 @@ public class OpenWebUIAdapter implements AIProvider {
                 .collect(Collectors.toList());
 
         if (lines.isEmpty()) {
-            return new ChartDataSet(targetDatasetId, prompt, List.of());
+            return new ChartDataSet(targetDatasetId, targetTableName, prompt, List.of());
         }
 
         // 3. Dynamic Data Mapping
@@ -186,11 +189,11 @@ public class OpenWebUIAdapter implements AIProvider {
                             .map(String::trim)
                             .collect(Collectors.joining(" | "));
 
-                    return new ChartData(label, value);
+                    return new ChartData(label, value); // We unpack this in the visualisation domain layer.
                     })
                 .collect(Collectors.toList());
 
-        return new ChartDataSet(targetDatasetId, prompt, points);
+        return new ChartDataSet(targetDatasetId, targetTableName, prompt, points);
     }
 
     @Override
