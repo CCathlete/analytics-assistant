@@ -33,7 +33,7 @@ public class AIService {
         }
 
         logger.debug("Dispatching prompt to AI Provider for CSV generation");
-        Try<String> aiResponse = aiProvider.sendPromptToAI(prompt, List.of()).toFuture().get();
+        Try<String> aiResponse = aiProvider.sendPromptToAI(modelName, prompt, List.of()).toFuture().get();
         String csvContent = aiResponse.getOrElseThrow(() -> new RuntimeException("AI provider returned no content"));
 
         logger.debug("Validating AI response structure");

@@ -59,15 +59,17 @@ public class OpenWebUIAdapter implements AIProvider {
         return success;
     }
 
-    private String internalSendPrompt(String prompt, List<String> contextData) {
+    private String internalSendPrompt(String model, String prompt, List<String> contextData) {
         logger.info("Sending AI prompt.");
         return restClient.post()
-                .uri("/api/chat/completed")
+                .uri("/api/chat/completions")
+                .header("Content-Type", "application/json")
                 .body(Map.of(
-                    "model", "gpt-4o",
+                    "model", model,
                     "messages", List.of(
                         Map.of("role", "system", "content", "Return CSV format only."),
-                        Map.of("role", "user", "content", prompt + "\nContext: " + String.join("\n", contextData))
+                        // Map.of("role", "user", "content", prompt + "\nContext: " + String.join("\n", contextData))
+                        Map.of("role", "user", "content", prompt)
                     )
                 ))
                 .retrieve()
@@ -144,8 +146,8 @@ public class OpenWebUIAdapter implements AIProvider {
     }
 
     @Override
-    public Mono<Try<String>> sendPromptToAI(String prompt, List<String> contextData) {
-        return SafeRunner.futureSafe(() -> internalSendPrompt(prompt, contextData));
+    public Mono<Try<String>> sendPromptToAI(String model, String prompt, List<String> contextData) {
+        return SafeRunner.futureSafe(() -> internalSendPrompt(model, prompt, contextData));
     }
 
     @Override

@@ -9,7 +9,7 @@ import com.catgineer.analytics_assistant.domain.model.ChartDataSet;
 
 public interface AIProvider {
     Mono<Try<Boolean>> validatePrompt(String prompt);
-    Mono<Try<String>> sendPromptToAI(String prompt, List<String> contextData);
+    Mono<Try<String>> sendPromptToAI(String model, String prompt, List<String> contextData);
     Mono<Try<Boolean>> validateAIResponse(String aiResponse);
     Mono<Try<ChartDataSet>> extractChartDataSet(String prompt, String aiResponse);
     Mono<Try<Boolean>> embedData(String data);
