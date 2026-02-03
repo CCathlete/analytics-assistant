@@ -84,7 +84,7 @@ public class SupersetAdapter implements VisualisationProvider {
 
         // Map keys to quoted identifiers in DDL
         String columnsDefinition = stableKeys.stream()
-                .map(k -> "\"" + k + "\" " + inferPostgresType(String.valueOf(firstRow.get(k))))
+                .map(k -> "\"" + k + "\" " + "TEXT")
                 .collect(Collectors.joining(", "));
         logger.info("Columns definition for table creation: {}", columnsDefinition);
 
