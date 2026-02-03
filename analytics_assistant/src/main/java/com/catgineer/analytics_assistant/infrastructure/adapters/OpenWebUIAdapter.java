@@ -170,11 +170,21 @@ public class OpenWebUIAdapter implements AIProvider {
                 .map(line -> line.split(","))
                 .filter(parts -> parts.length >= 2)
                 .map(parts -> {
-                    String label = parts[0].trim();
-                    // Taking the last element handles schemas like [week, project, count]
-                    String valueStr = parts[parts.length - 1].trim();
-                    return new ChartData(label, Double.parseDouble(valueStr));
-                })
+                    // Extract value from the last column
+                    String rawValue = parts[parts.length - 1].trim();
+                    Double value = rawValue.matches(
+                        "-?\\d+(\\.\\d+)?"
+                    ) ? Double.parseDouble(rawValue) : 0.0;
+
+                    // Join ALL previous columns to preserve Project Name and Week
+                    // This creates a label like "2026-01-25 | vavr-io"
+                    String label = Arrays.stream(parts)
+                            .limit(parts.length - 1)
+                            .map(String::trim)
+                            .collect(Collectors.joining(" | "));
+
+                    return new ChartData(label, value);
+                    })
                 .collect(Collectors.toList());
 
         return new ChartDataSet(prompt, points);

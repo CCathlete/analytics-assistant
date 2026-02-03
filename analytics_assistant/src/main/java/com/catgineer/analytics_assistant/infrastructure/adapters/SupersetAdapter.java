@@ -6,6 +6,7 @@ import tools.jackson.databind.JsonNode;
 import io.vavr.control.Try;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.client.RestClient;
 import reactor.core.publisher.Mono;
@@ -18,6 +19,10 @@ public class SupersetAdapter implements VisualisationProvider {
 
     private static final Logger logger = LoggerFactory.getLogger(SupersetAdapter.class);
     private final JdbcTemplate jdbcTemplate;
+
+    private String targetDatasetId;
+    private String targetTableName;
+
     private RestClient restClient;
     private String accessToken;
 
@@ -29,7 +34,9 @@ public class SupersetAdapter implements VisualisationProvider {
         JdbcTemplate jdbcTemplate,
         String baseUrl,
         String username,
-        String password
+        String password,
+        @Value("${SUPERSET_TABLE_NAME}") String targetTableName,
+        @Value("${SUPERSET_DATASET_ID}") String targetDatasetId
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.restClient = RestClient.builder()
@@ -58,23 +65,29 @@ public class SupersetAdapter implements VisualisationProvider {
         return this.accessToken;
     }
 
-    private Boolean internalOverwriteTable(String tableName, List<Map<String, Object>> data) {
+    private Boolean internalOverwriteTable(List<Map<String, Object>> data) {
         if (data.isEmpty()) {
-            logger.warn("No data for table {}", tableName);
+            logger.warn("No data for table {}", targetTableName);
             return true;
         }
 
-        jdbcTemplate.execute("DROP TABLE IF EXISTS " + tableName);
+        jdbcTemplate.execute("DROP TABLE IF EXISTS " + targetTableName);
         
         Map<String, Object> firstRow = data.get(0);
-        String columns = firstRow.keySet().stream()
-                .map(k -> k + " TEXT")
+        String columnsDefinition = firstRow.entrySet().stream()
+                .map(entry -> entry.getKey() + " " + inferPostgresType(String.valueOf(entry.getValue())))
                 .collect(Collectors.joining(", "));
         
-        jdbcTemplate.execute("CREATE TABLE " + tableName + " (" + columns + ")");
+        jdbcTemplate.execute("CREATE TABLE " + targetTableName + " (" + columnsDefinition + ")");
 
+        String columnNames = String.join(", ", firstRow.keySet());
         String placeholders = firstRow.keySet().stream().map(k -> "?").collect(Collectors.joining(","));
-        String sql = "INSERT INTO " + tableName + " VALUES (" + placeholders + ")";
+        String sql = String.format(
+            "INSERT INTO %s (%s) VALUES (%s)",
+            targetTableName,
+            columnNames,
+            placeholders
+        );
         
         List<Object[]> batchArgs = data.stream()
                 .map(row -> row.values().toArray())
@@ -84,19 +97,27 @@ public class SupersetAdapter implements VisualisationProvider {
         return true;
     }
 
-    private Boolean internalRefresh(Integer datasetId) {
+    private String inferPostgresType(String value) {
+        if (value == null || value.equalsIgnoreCase("null")) return "TEXT";
+        if (value.equalsIgnoreCase("true") || value.equalsIgnoreCase("false")) return "BOOLEAN";
+        if (value.matches("\\d{4}-\\d{2}-\\d{2}")) return "DATE";
+        if (value.matches("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*")) return "TIMESTAMP";
+        if (value.matches("-?\\d+(\\.\\d+)?")) return "NUMERIC";
+        return "TEXT";
+    }
+
+    private Boolean internalRefresh() {
         if (accessToken == null) authenticate();
-        
         restClient.put()
-                .uri("/api/v1/dataset/{id}/refresh", datasetId)
+                .uri("/api/v1/dataset/{id}/refresh", targetDatasetId)
                 .headers(h -> h.setBearerAuth(accessToken))
                 .retrieve()
-                .toBodilessEntity(); // Pure synchronous wait
-        
+                .toBodilessEntity();
         return true;
     }
 
-    private Integer internalCreateChart(Integer datasetId, String name, String type, String params) {
+
+    private Integer internalCreateChart(Integer datasetId, String name, String type, String paramsJson) {
         if (accessToken == null) authenticate();
         
         JsonNode res = restClient.post()
@@ -107,7 +128,7 @@ public class SupersetAdapter implements VisualisationProvider {
                     "viz_type", type,
                     "datasource_id", datasetId,
                     "datasource_type", "table",
-                    "params", params
+                    "params", paramsJson
                 ))
                 .retrieve()
                 .body(JsonNode.class);
@@ -120,12 +141,16 @@ public class SupersetAdapter implements VisualisationProvider {
 
     @Override
     public Mono<Try<Boolean>> overwritePhysicalTable(String tableName, List<Map<String, Object>> data) {
-        return SafeRunner.futureSafe(() -> internalOverwriteTable(tableName, data));
+        // TODO: Fix signature.
+        // We now ignore the tableName parameter in favor of the injected targetTableName
+        return SafeRunner.futureSafe(() -> internalOverwriteTable(data));
     }
 
     @Override
     public Mono<Try<Boolean>> refreshDataset(Integer datasetId) {
-        return SafeRunner.futureSafe(() -> internalRefresh(datasetId));
+        // TODO: Fix signature.
+        // We ignore the datasetId parameter in favor of the injected targetDatasetId
+        return SafeRunner.futureSafe(this::internalRefresh);
     }
 
     @Override
