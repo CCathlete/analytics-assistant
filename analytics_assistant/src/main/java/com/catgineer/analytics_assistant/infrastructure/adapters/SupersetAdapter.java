@@ -87,6 +87,11 @@ public class SupersetAdapter implements VisualisationProvider {
         jdbcTemplate.execute("CREATE TABLE " + targetTableName + " (" + columnsDefinition + ")");
         logger.info("Table {} created successfully", targetTableName);
 
+        String selectQuery = "select * from " + targetTableName + " limit 1";
+        List<Map<String, Object>> results = jdbcTemplate.queryForList(selectQuery);
+    
+        logger.info("Fetched {} rows from table {}", results.size(), targetTableName);
+
         String columnNames = String.join(", ", stableKeys);
         logger.info("Column names for insertion: {}", columnNames);
 
@@ -96,15 +101,23 @@ public class SupersetAdapter implements VisualisationProvider {
 
         // Map values strictly following the stable keys to prevent alignment issues
         List<Object[]> batchArgs = data.stream()
-                .map(row -> stableKeys.stream()
-                        .map(row::get)
-                        .toArray(Object[]::new))
+                .map(row -> {
+                    Object[] values = new Object[stableKeys.size()];
+                    for (int i = 0; i < stableKeys.size(); i++) {
+                        values[i] = row.get(stableKeys.get(i));
+                    }
+                    return values;
+                })
                 .toList();
 
         logger.info("Data for insertion: {}", batchArgs.stream().map(java.util.Arrays::toString).toList());
-
-        jdbcTemplate.batchUpdate(sql, batchArgs);
-        return true;
+        try {
+            jdbcTemplate.batchUpdate(sql, batchArgs);
+            return true;
+        } catch (Exception e) {
+            logger.error("JDBC Batch Update failed for table {}: {}", targetTableName, e.getMessage());
+            return false;
+        }
     }
 
     private String inferPostgresType(String value) {
