@@ -134,18 +134,40 @@ public class OpenWebUIAdapter implements AIProvider {
     }
 
     private ChartDataSet internalExtractDataSet(String prompt, String aiResponse) {
-        logger.info("Parsing AI response.");
+        logger.info("Parsing AI response for ChartDataSet.");
+
+        // 1. Extract CSV content (handling potential markdown wrap)
         Pattern pattern = Pattern.compile("(?s)```(?:csv)?\\n(.*?)\\n```");
         Matcher matcher = pattern.matcher(aiResponse);
         String csv = matcher.find() ? matcher.group(1).trim() : aiResponse.trim();
 
-        if (csv.isEmpty()) throw new IllegalStateException("CSV content missing");
+        if (csv.isEmpty()) {
+            logger.error("Extracted CSV content is empty.");
+            throw new IllegalStateException("CSV content missing");
+        }
 
-        List<ChartData> points = Arrays.stream(csv.split("\\n"))
+        // 2. Filter and Sanitize lines
+        List<String> lines = Arrays.stream(csv.split("\\n"))
+                .map(String::trim)
                 .filter(line -> line.contains(","))
-                .map(line -> {
-                    String[] p = line.split(",");
-                    return new ChartData(p[0].trim(), Double.parseDouble(p[1].trim()));
+                .collect(Collectors.toList());
+
+        if (lines.isEmpty()) {
+            return new ChartDataSet(prompt, List.of());
+        }
+
+        // 3. Dynamic Data Mapping
+        // We skip the first line (the header we forced the AI to generate in the Domain layer)
+        // We map parts[0] as the label and the last column as the numeric value
+        List<ChartData> points = lines.stream()
+                .skip(1) 
+                .map(line -> line.split(","))
+                .filter(parts -> parts.length >= 2)
+                .map(parts -> {
+                    String label = parts[0].trim();
+                    // Taking the last element handles schemas like [week, project, count]
+                    String valueStr = parts[parts.length - 1].trim();
+                    return new ChartData(label, Double.parseDouble(valueStr));
                 })
                 .collect(Collectors.toList());
 
