@@ -36,19 +36,22 @@ public class AnalyticsController {
     private final AppConfigData appConfig;
     
     private final String supersetBaseUrl;
+    private final Boolean embeddingEnabled;
 
     public AnalyticsController(
             IngestSources ingestionService,
             GenerateChartFromPrompt generateChartService, 
             AIService aiService,
             AppConfigData appConfig, // A bean loaded by Spring.
-            @Value("${SUPERSET_BASE_URL}") String supersetBaseUrl
+            @Value("${SUPERSET_BASE_URL}") String supersetBaseUrl,
+            @Value("${ENABLE_EMBEDDING}") Boolean embeddingEnabled
     ) {
         this.ingestionService = ingestionService;
         this.generateChartService = generateChartService;
         this.aiService = aiService;
         this.appConfig = appConfig;
         this.supersetBaseUrl = supersetBaseUrl;
+        this.embeddingEnabled = embeddingEnabled;
     }
 
     @PostMapping("/auth")
@@ -98,18 +101,25 @@ public class AnalyticsController {
 
         logger.info("Found {} URLs in config. Triggering IngestSources...", urls.size());
 
-        ingestionService.execute(urls)
-            .doOnSubscribe(s -> logger.info("Ingestion subscription activated."))
-            .subscribe(
-                result -> {
-                    if (result.isSuccess()) {
-                        logger.info("Automatic startup ingestion completed successfully.");
-                    } else {
-                        logger.error("Automatic startup ingestion failed: {}", result.getCause().getMessage());
-                    }
-                },
-                error -> logger.error("Fatal error in ingestion stream: {}", error.getMessage())
-            );
+        if (embeddingEnabled) {
+            ingestionService.execute(urls)
+                .doOnSubscribe(s -> logger.info("Ingestion subscription activated."))
+                .subscribe(
+                    result -> {
+                        if (result.isSuccess()) {
+                            logger.info("Automatic startup ingestion completed successfully.");
+                        } else {
+                            logger.error(
+                                "Automatic startup ingestion failed: {}",
+                                result.getCause().getMessage()
+                            );
+                        }
+                    },
+                    error -> logger.error("Fatal error in ingestion stream: {}", error.getMessage())
+                );
+        } else {
+            logger.info("Skipping ingestion.");
+        }
     }
 
 }
