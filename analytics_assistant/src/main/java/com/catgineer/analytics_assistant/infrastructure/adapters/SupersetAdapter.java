@@ -91,7 +91,8 @@ public class SupersetAdapter implements VisualisationProvider {
         logger.info("Column names for insertion: {}", columnNames);
 
         String placeholders = stableKeys.stream().map(k -> "?").collect(Collectors.joining(","));
-        String sql = String.format("INSERT INTO %s (%s) VALUES (%s)", targetTableName, columnNames, placeholders);
+        String sql = String.format("INSERT INTO TABLE %s (%s) VALUES (%s)", targetTableName, columnNames, placeholders);
+        logger.info("Insertion query: {}", sql);
 
         // Map values strictly following the stable keys to prevent alignment issues
         List<Object[]> batchArgs = data.stream()
