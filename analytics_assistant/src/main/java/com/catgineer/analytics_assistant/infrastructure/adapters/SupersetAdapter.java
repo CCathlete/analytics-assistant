@@ -75,33 +75,33 @@ public class SupersetAdapter implements VisualisationProvider {
 
         jdbcTemplate.execute("DROP TABLE IF EXISTS " + targetTableName);
         logger.info("Table {} dropped successfully", targetTableName);
-        
-        Map<String, Object> firstRow = data.get(0);
-        String columnsDefinition = firstRow.entrySet().stream()
-                .map(entry -> entry.getKey() + " " + inferPostgresType(String.valueOf(entry.getValue())))
+
+        final Map<String, Object> firstRow = data.get(0);
+        final List<String> stableKeys = List.copyOf(firstRow.keySet());
+
+        String columnsDefinition = stableKeys.stream()
+                .map(k -> k + " " + inferPostgresType(String.valueOf(firstRow.get(k))))
                 .collect(Collectors.joining(", "));
         logger.info("Columns definition for table creation: {}", columnsDefinition);
-        
+
         jdbcTemplate.execute("CREATE TABLE " + targetTableName + " (" + columnsDefinition + ")");
         logger.info("Table {} created successfully", targetTableName);
 
-        String columnNames = String.join(", ", firstRow.keySet());
+        String columnNames = String.join(", ", stableKeys);
         logger.info("Column names for insertion: {}", columnNames);
 
-        String placeholders = firstRow.keySet().stream().map(k -> "?").collect(Collectors.joining(","));
-        String sql = String.format(
-            "INSERT INTO %s (%s) VALUES (%s)",
-            targetTableName,
-            columnNames,
-            placeholders
-        );
-        logger.info("Query for insertion: \n{}", sql);
-        
+        String placeholders = stableKeys.stream().map(k -> "?").collect(Collectors.joining(","));
+        String sql = String.format("INSERT INTO %s (%s) VALUES (%s)", targetTableName, columnNames, placeholders);
+
+        // Map values strictly following the stable keys to prevent alignment issues
         List<Object[]> batchArgs = data.stream()
-                .map(row -> row.values().toArray())
-                .collect(Collectors.toList());
-        logger.info("Data for insertion: {}", batchArgs.toString());
-        
+                .map(row -> stableKeys.stream()
+                        .map(row::get)
+                        .toArray(Object[]::new))
+                .toList();
+
+        logger.info("Data for insertion: {}", batchArgs.stream().map(java.util.Arrays::toString).toList());
+
         jdbcTemplate.batchUpdate(sql, batchArgs);
         return true;
     }
