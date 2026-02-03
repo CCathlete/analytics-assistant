@@ -73,30 +73,39 @@ public class SupersetAdapter implements VisualisationProvider {
             return true;
         }
 
-        jdbcTemplate.execute("DROP TABLE IF EXISTS " + targetTableName);
+        // Quote the table name for all operations
+        final String quotedTable = "\"" + targetTableName + "\"";
+
+        jdbcTemplate.execute("DROP TABLE IF EXISTS " + quotedTable);
         logger.info("Table {} dropped successfully", targetTableName);
 
         final Map<String, Object> firstRow = data.get(0);
         final List<String> stableKeys = List.copyOf(firstRow.keySet());
 
+        // Map keys to quoted identifiers in DDL
         String columnsDefinition = stableKeys.stream()
-                .map(k -> k + " " + inferPostgresType(String.valueOf(firstRow.get(k))))
+                .map(k -> "\"" + k + "\" " + inferPostgresType(String.valueOf(firstRow.get(k))))
                 .collect(Collectors.joining(", "));
         logger.info("Columns definition for table creation: {}", columnsDefinition);
 
-        jdbcTemplate.execute("CREATE TABLE " + targetTableName + " (" + columnsDefinition + ")");
+        jdbcTemplate.execute("CREATE TABLE " + quotedTable + " (" + columnsDefinition + ")");
         logger.info("Table {} created successfully", targetTableName);
 
-        String selectQuery = "select * from " + targetTableName + " limit 1";
+        // Debug SELECT to verify schema existence
+        String selectQuery = "SELECT * FROM " + quotedTable + " LIMIT 1";
         List<Map<String, Object>> results = jdbcTemplate.queryForList(selectQuery);
-    
         logger.info("Fetched {} rows from table {}", results.size(), targetTableName);
 
-        String columnNames = String.join(", ", stableKeys);
-        logger.info("Column names for insertion: {}", columnNames);
+        // Quote column names for the INSERT statement
+        String quotedColumnNames = stableKeys.stream()
+                .map(k -> "\"" + k + "\"")
+                .collect(Collectors.joining(", "));
+        logger.info("Column names for insertion: {}", quotedColumnNames);
 
         String placeholders = stableKeys.stream().map(k -> "?").collect(Collectors.joining(","));
-        String sql = String.format("INSERT INTO %s (%s) VALUES (%s)", targetTableName, columnNames, placeholders);
+        
+        // Final SQL without the 'TABLE' keyword and with quoted identifiers
+        String sql = String.format("INSERT INTO %s (%s) VALUES (%s)", quotedTable, quotedColumnNames, placeholders);
         logger.info("Insertion query: {}", sql);
 
         // Map values strictly following the stable keys to prevent alignment issues
@@ -111,8 +120,10 @@ public class SupersetAdapter implements VisualisationProvider {
                 .toList();
 
         logger.info("Data for insertion: {}", batchArgs.stream().map(java.util.Arrays::toString).toList());
+        
         try {
             jdbcTemplate.batchUpdate(sql, batchArgs);
+            logger.info("Batch update successful for table {}", targetTableName);
             return true;
         } catch (Exception e) {
             logger.error("JDBC Batch Update failed for table {}: {}", targetTableName, e.getMessage());
