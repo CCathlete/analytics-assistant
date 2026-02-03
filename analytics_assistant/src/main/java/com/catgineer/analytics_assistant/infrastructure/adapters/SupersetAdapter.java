@@ -83,6 +83,7 @@ public class SupersetAdapter implements VisualisationProvider {
         logger.info("Columns definition for table creation: {}", columnsDefinition);
         
         jdbcTemplate.execute("CREATE TABLE " + targetTableName + " (" + columnsDefinition + ")");
+        logger.info("Table {} created successfully", targetTableName);
 
         String columnNames = String.join(", ", firstRow.keySet());
         logger.info("Column names for insertion: {}", columnNames);
@@ -98,7 +99,7 @@ public class SupersetAdapter implements VisualisationProvider {
         List<Object[]> batchArgs = data.stream()
                 .map(row -> row.values().toArray())
                 .collect(Collectors.toList());
-        logger.info("Data for insertion: {}", batchArgs);
+        logger.info("Data for insertion: {}", batchArgs.toString());
         
         jdbcTemplate.batchUpdate(sql, batchArgs);
         return true;
