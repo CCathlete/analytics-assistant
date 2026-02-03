@@ -11,6 +11,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.client.RestClient;
 import reactor.core.publisher.Mono;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -151,8 +152,10 @@ public class SupersetAdapter implements VisualisationProvider {
                 "table_name", targetTableName
             ))
             .retrieve()
-            .onStatus(HttpStatusCode::isError,
-                (req, res) -> logger.error("Metadata sync failed for dataset {}", targetDatasetId)) 
+            .onStatus(HttpStatusCode::isError, (req, res) -> {
+                String errorBody = new String(res.getBody().readAllBytes(), StandardCharsets.UTF_8);
+                logger.error("Metadata sync failed for dataset {}. Response: {}", targetDatasetId, errorBody);
+                })
             .body(JsonNode.class);
 
         return true;
