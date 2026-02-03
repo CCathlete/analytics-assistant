@@ -143,19 +143,41 @@ public class SupersetAdapter implements VisualisationProvider {
 
     private Boolean internalRefresh() {
         if (accessToken == null) authenticate();
-        restClient.put()
-                .uri("/api/v1/dataset/{id}", targetDatasetId)
-                .headers(h -> h.setBearerAuth(accessToken))
-                .body(Map.of(
-                    "schema", "public",
-                    "table_name", targetTableName
-                ))
-                .retrieve()
-                .onStatus(HttpStatusCode::isError, (req, res) -> {
-                    String errorBody = new String(res.getBody().readAllBytes(), StandardCharsets.UTF_8);
-                    logger.error("Metadata sync failed for dataset {}. Response: {}", targetDatasetId, errorBody);
-                    })
-                .body(JsonNode.class);
+        restClient.delete()
+            .uri("/api/v1/dataset/{id}", targetDatasetId)
+            .headers(h -> h.setBearerAuth(accessToken))
+            .retrieve()
+            .toBodilessEntity();
+
+        restClient.post()
+            .uri("/api/v1/dataset/")
+            .headers(h -> h.setBearerAuth(accessToken))
+            .body(Map.of(
+                "schema", "public",
+                "table_name", targetTableName,
+                "database", "1"
+            ))
+            .retrieve()
+            .onStatus(HttpStatusCode::isError, (req, res) -> {
+                String errorBody = new String(res.getBody().readAllBytes(), StandardCharsets.UTF_8);
+                logger.error("Metadata sync failed for dataset {}. Response: {}", targetDatasetId, errorBody);
+                })
+            .body(JsonNode.class);
+
+
+        // restClient.put()
+        //         .uri("/api/v1/dataset/{id}", targetDatasetId)
+        //         .headers(h -> h.setBearerAuth(accessToken))
+        //         .body(Map.of(
+        //             "schema", "public",
+        //             "table_name", targetTableName
+        //         ))
+        //         .retrieve()
+        //         .onStatus(HttpStatusCode::isError, (req, res) -> {
+        //             String errorBody = new String(res.getBody().readAllBytes(), StandardCharsets.UTF_8);
+        //             logger.error("Metadata sync failed for dataset {}. Response: {}", targetDatasetId, errorBody);
+        //             })
+        //         .body(JsonNode.class);
         return true;
     }
 
