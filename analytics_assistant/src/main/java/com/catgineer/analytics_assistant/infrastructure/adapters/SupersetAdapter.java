@@ -95,6 +95,7 @@ public class SupersetAdapter implements VisualisationProvider {
             columnNames,
             placeholders
         );
+        logger.info("Query for insertion: \n{}", sql);
         
         List<Object[]> batchArgs = data.stream()
                 .map(row -> row.values().toArray())
