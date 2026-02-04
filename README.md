@@ -1,3 +1,5 @@
+<img width="1919" height="871" alt="Screenshot From 2026-02-04 09-35-11" src="https://github.com/user-attachments/assets/8022e3a7-8b23-493e-9378-3471abce7014" />
+
 # ARIS (🙂) Analytics Assistant
 
 **Automated Real-time Insight System (ARIS)**
