@@ -23,14 +23,16 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
         },
         body: JSON.stringify({ 
             prompt: prompt,
-            username: user.username 
+            modelName: "visualisation-assistant",
+            sourceUrls: [""],
+            targetDatasetId: 1
         }),
       });
 
       if (response.ok) {
         const data = await response.json();
-        if (data.url) {
-          setSupersetUrl(data.url);
+        if (data.supersetUrl) {
+          setSupersetUrl(data.supersetUrl);
         }
       } else {
         console.error("Failed to generate chart metadata");
