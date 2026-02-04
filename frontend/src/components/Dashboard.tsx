@@ -82,19 +82,21 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
         height: '40px',
         display: 'flex',
         alignItems: 'center',
+        justifyContent: 'center',
         padding: '0 20px',
         background: '#0f172a',
         borderBottom: '1px solid #1e293b',
-        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+        position: 'relative'
       }}>
         <h1 style={{ 
           margin: 0, 
-          fontSize: '14px', 
+          fontSize: '21px', 
           fontWeight: 600, 
           color: '#f8fafc', 
           letterSpacing: '0.025em' 
         }}>
-          Visualisation Assistant - <span style={{ color: '#3b82f6' }}>ARIS</span>
+          Visualisation Assistant - <span style={{ color: '#3b82f6' }}> ARIS </span>
         </h1>
       </header>
       
