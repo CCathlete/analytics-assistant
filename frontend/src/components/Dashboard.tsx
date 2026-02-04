@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User } from '../types';
+import { type User } from '../types.tsx';
 
 interface DashboardProps {
   user: User;
@@ -9,7 +9,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
   const [prompt, setPrompt] = useState<string>("");
 
   // In production, this URL would be signed or use Guest Tokens for Security
-  const SUPERSET_URL = "http://your-superset-host/superset/explore/?standalone=true";
+  const SUPERSET_URL = ""; // TODO: needs to be sent from backend.
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
