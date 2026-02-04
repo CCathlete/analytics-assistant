@@ -17,7 +17,7 @@ In many organizations, generating a new chart is a multi-step process requiring 
 | **Backend** | **Java 21 / Spring Boot** | Orchestrator & Monadic Logic |
 | **Frontend** | **React (Vite) + TypeScript** | Modern, Resizable UI Workspace |
 | **AI & RAG** | **OpenWebUI / LiteLLM** | Auth, Knowledge Base, & Data Tagging |
-| **Data Platform** | **Apache Spark & Hive** | Big Data Processing & Metastore |
+| **Data Platform** | **Apache Spark & Iceberg (Project Nessie)** | Data Processing & Metastore |
 | **Data Lake** | **Minio** | Layered Storage (Bronze, Silver, Gold) |
 | **Visualization** | **Apache Superset** | Dynamic Chart Rendering & Embedding |
 | **Warehouse** | **PostgreSQL** | Structured Data Storage |
