@@ -3,13 +3,12 @@ import { type User } from '../types.tsx';
 
 interface LoginFormProps {
   onSuccess: (user: User) => void;
-  isLoading: boolean; // Matches the prop being passed in App.tsx
+  isLoading: boolean;
 }
 
 const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, isLoading }) => {
   const [username, setUsername] = useState<string>('');
   const [password, setPassword] = useState<string>('');
-  // Internal state for the local button feedback, though we use the prop for blocking
   const [isConnecting, setIsConnecting] = useState<boolean>(false);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
@@ -29,8 +28,6 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, isLoading }) => {
         const data: User = await response.json();
         onSuccess(data);
       } else {
-        // Since we are "fully working right now" and relying on Chrome session,
-        // we fallback to success even if the API isn't ready yet.
         console.warn("Auth endpoint failed, falling back to mock for local session.");
         onSuccess({ username, accessToken: "local-browser-session" });
       }
@@ -47,7 +44,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, isLoading }) => {
   return (
     <div style={pageContainer}>
       <form onSubmit={handleSubmit} style={formCard}>
-        <h2 style={{ marginBottom: '1.5rem', textAlign: 'center', color: '#1e293b' }}>Data Platform</h2>
+        <h2 style={{ marginBottom: '1.5rem', textAlign: 'center', color: '#1e293b' }}>Vis Assist</h2>
         
         <div style={inputWrapper}>
           <label style={labelStyle}>Username</label>
