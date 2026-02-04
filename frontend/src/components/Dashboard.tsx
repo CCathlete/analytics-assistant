@@ -19,7 +19,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          // Even if we rely on Chrome cookies, passing the token is good practice for the future
           'Authorization': `Bearer ${user.accessToken}` 
         },
         body: JSON.stringify({ 
@@ -30,7 +29,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
       if (response.ok) {
         const data = await response.json();
-        // Assuming the backend returns the URL of the generated chart/dashboard
         if (data.url) {
           setSupersetUrl(data.url);
         }
@@ -45,8 +43,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#0f172a' }}>
-      {/* The Big Window (Superset) */}
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#0f172a' }}> {}
       <section style={{ flex: 1, border: 'none', background: '#ffffff' }}>
         {supersetUrl ? (
           <iframe
@@ -76,7 +73,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
             border: '1px solid #475569',
             resize: 'none'
           }}
-          placeholder="Ask Gemma to analyze data (e.g., 'Show me sales by region from pg_domain_data')"
+          placeholder="Put your prompt here (e.g., 'Show me sales by region from pg_domain_data')"
           value={prompt}
           onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setPrompt(e.target.value)}
           disabled={isExecuting}

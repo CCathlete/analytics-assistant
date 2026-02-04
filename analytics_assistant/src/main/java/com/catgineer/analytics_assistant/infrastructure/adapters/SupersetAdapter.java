@@ -83,7 +83,6 @@ public class SupersetAdapter implements VisualisationProvider {
         final Map<String, Object> firstRow = data.get(0);
         final List<String> stableKeys = List.copyOf(firstRow.keySet());
 
-        // Map keys to quoted identifiers in DDL
         String columnsDefinition = stableKeys.stream()
                 .map(k -> "\"" + k + "\" " + "TEXT")
                 .collect(Collectors.joining(", "));
